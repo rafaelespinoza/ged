@@ -2,33 +2,23 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"io"
-	"log/slog"
+	"fmt"
 	"os"
 
-	"github.com/rafaelespinoza/reltree/internal/log"
-	"github.com/rafaelespinoza/reltree/internal/srv"
+	"github.com/rafaelespinoza/reltree/internal/cmd"
 )
 
-func init() {
-	replaceAttrs := func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.TimeKey {
-			return slog.Attr{}
-		}
-		return a
-	}
-
-	h := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo, ReplaceAttr: replaceAttrs})
-	log.Init(h)
-}
+const (
+	ansiOpen   = "\033["
+	ansiClose  = "m"
+	ansiBoldOn = ansiOpen + "1" + ansiClose
+	ansiReset  = ansiOpen + "0" + ansiClose
+)
 
 func main() {
-	people, unions, err := srv.ParseGedcom(context.Background(), os.Stdin)
+	err := cmd.New().Run(context.Background(), os.Args[1:])
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%s%v%s\n", ansiBoldOn, err, ansiReset)
+		os.Exit(1)
 	}
-	writeJSON(os.Stdout, map[string]any{"people": people, "unions": unions})
 }
-
-func writeJSON(out io.Writer, data any) error { return json.NewEncoder(out).Encode(data) }
