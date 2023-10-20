@@ -29,6 +29,12 @@
 1 CHAN
 2 DATE 30 DEC 2015
 3 TIME 18:04:32.743
+0 @U1@ SUBM
+1 NAME Rafael Espinoza
+1 CHAN
+2 DATE 19 OCT 2023
+3 TIME 18:04:32.743
+1 NOTE Add some records manually to exercise more application code
 0 @I0@ INDI
 1 _UID 0C417DB185584332B0D37D1FAF3CF3BA84A4
 1 NAME John Fitzgerald /Kennedy/
@@ -485,6 +491,7 @@
 2 DATE 24 SEP 1952
 2 _DATI V02C0000S01240919520000000E01000000000000000T
 1 FAMC @F5@
+1 FAMS @F19@
 1 CHAN
 2 DATE 1 MAR 2020
 3 TIME 14:55:08.951
@@ -1272,6 +1279,45 @@
 1 CHAN
 2 DATE 1 MAR 2020
 3 TIME 15:51:04.427
+0 @I70@ INDI
+1 NAME Joseph Patrick /Kennedy/ III
+2 TYPE Birth
+2 GIVN Joseph Patrick
+2 SURN Kennedy
+1 SEX M
+1 BIRT
+2 DATE 4 OCT 1980
+1 FAMC @F19@
+1 CHAN
+2 DATE 19 OCT 2023
+3 TIME 18:58:00.000
+1 SUBM @U1@
+0 @I71@ INDI
+1 NAME Sheila Brewster /Rauch/
+2 TYPE Birth
+2 GIVN Sheila Brewter
+2 SURN Rauch
+1 SEX F
+1 BIRT
+2 DATE 22 MAR 1949
+1 FAMS @F19@
+1 CHAN
+2 DATE 19 OCT 2023
+3 TIME 18:58:00.000
+1 SUBM @U1@
+0 @I72@ INDI
+1 NAME Katherine Eunice /Schwarzenegger/
+2 TYPE Birth
+2 GIVN Katherine Eunice
+2 SURN Schwarzenegger
+1 SEX F
+1 BIRT
+2 DATE 13 MAR 1989
+1 FAMC @F12@
+1 CHAN
+2 DATE 19 OCT 2023
+3 TIME 18:58:00.000
+1 SUBM @U1@
 0 @F0@ FAM
 1 HUSB @I1@
 1 WIFE @I2@
@@ -1469,6 +1515,7 @@
 0 @F12@ FAM
 1 HUSB @I10@
 1 WIFE @I11@
+1 CHIL @I72@
 1 MARR
 2 TYPE marriage
 2 DATE 1986
@@ -1550,6 +1597,14 @@
 1 CHAN
 2 DATE 30 DEC 2015
 3 TIME 18:04:32.743
+0 @F19@ FAM
+1 HUSB @I24@
+1 WIFE @I71@
+1 CHIL @I70@
+1 MARR
+2 TYPE marriage
+2 DATE Abt 1980
+1 SUBM @U1@
 0 @T0@ NOTE Joseph Patrick was well liked, quick to smile, and had a tremendous dose of Irish charm.
 0 @T1@ NOTE She helped in the many political campaigns of her brother, John Fitzgerald.
 0 @T2@ NOTE Robert Francis was assassinated in California during his 1968 presidential campaign.
