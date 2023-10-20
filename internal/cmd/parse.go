@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/rafaelespinoza/alf"
-	"github.com/rafaelespinoza/reltree/internal/srv"
+	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
 func makeParse(name string) alf.Directive {

@@ -1,3 +1,3 @@
-# reltree
+# ged
 
 genealogy tooling

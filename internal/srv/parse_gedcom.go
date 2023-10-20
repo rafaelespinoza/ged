@@ -7,9 +7,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/rafaelespinoza/reltree/internal/entity"
-	"github.com/rafaelespinoza/reltree/internal/gedcom"
-	"github.com/rafaelespinoza/reltree/internal/log"
+	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/gedcom"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 func ParseGedcom(ctx context.Context, r io.Reader) ([]*entity.Person, []*entity.Union, error) {

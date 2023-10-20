@@ -7,8 +7,8 @@ import (
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
-	"github.com/rafaelespinoza/reltree/internal/gedcom/enumset"
-	"github.com/rafaelespinoza/reltree/internal/log"
+	"github.com/rafaelespinoza/ged/internal/gedcom/enumset"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 // IndividualRecord is a record structure for an individual person. Its URI is

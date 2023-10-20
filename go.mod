@@ -1,4 +1,4 @@
-module github.com/rafaelespinoza/reltree
+module github.com/rafaelespinoza/ged
 
 go 1.21.3
 

@@ -9,7 +9,7 @@ import (
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
-	"github.com/rafaelespinoza/reltree/internal/log"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 // Records is a collection of top-level record types.

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelespinoza/reltree/internal/gedcom"
+	"github.com/rafaelespinoza/ged/internal/gedcom"
 )
 
 func TestReadRecordsSanityCheck(t *testing.T) {

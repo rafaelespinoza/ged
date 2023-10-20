@@ -13,9 +13,9 @@ import (
 
 	"github.com/rafaelespinoza/alf"
 
-	"github.com/rafaelespinoza/reltree/internal/entity"
-	"github.com/rafaelespinoza/reltree/internal/log"
-	"github.com/rafaelespinoza/reltree/internal/srv"
+	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
 func makeRelate(name string) alf.Directive {

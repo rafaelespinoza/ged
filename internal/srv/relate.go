@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rafaelespinoza/reltree/internal/entity"
-	"github.com/rafaelespinoza/reltree/internal/log"
+	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 type Relator interface {

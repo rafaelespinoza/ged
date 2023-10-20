@@ -7,7 +7,7 @@ import (
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
-	"github.com/rafaelespinoza/reltree/internal/gedcom/enumset"
+	"github.com/rafaelespinoza/ged/internal/gedcom/enumset"
 )
 
 // PersonalName is an individual's name. Its URI is g7:INDI-NAME.

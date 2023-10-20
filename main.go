@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rafaelespinoza/reltree/internal/cmd"
+	"github.com/rafaelespinoza/ged/internal/cmd"
 )
 
 const (

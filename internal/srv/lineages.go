@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rafaelespinoza/reltree/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/entity"
 )
 
 // makeLineages computes the familial relationship between two ancestral

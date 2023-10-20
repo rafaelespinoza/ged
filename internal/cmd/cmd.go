@@ -12,7 +12,7 @@ import (
 
 	"github.com/rafaelespinoza/alf"
 
-	"github.com/rafaelespinoza/reltree/internal/log"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 var (
@@ -41,7 +41,7 @@ func New() Root {
 		},
 	}
 
-	rootFlags := newFlagSet("reltree")
+	rootFlags := newFlagSet("ged")
 	rootFlags.BoolVar(&args.loggingOff, "q", false, "if true, then all logging is effectively off")
 	rootFlags.StringVar(&args.logLevel, "loglevel", validLoggingLevels[len(validLoggingLevels)-1].String(), fmt.Sprintf("minimum severity for which to log events, should be one of %q", validLoggingLevels))
 	rootFlags.StringVar(&args.logFormat, "logformat", validLoggingFormats[len(validLoggingFormats)-1], fmt.Sprintf("output format for logs, should be one of %q", validLoggingFormats))
@@ -62,7 +62,7 @@ Commands:
 
 Examples:
 
-	%s [reltree-flags] <command> -h
+	%s [ged-flags] <command> -h
 	%s -loglevel INFO <command>
 	%s -logformat json <command>
 	%s -logformat text -loglevel WARN <command>

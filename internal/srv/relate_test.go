@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rafaelespinoza/reltree/internal/entity"
-	"github.com/rafaelespinoza/reltree/internal/srv"
+	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
 func TestRelatorRelate(t *testing.T) {
