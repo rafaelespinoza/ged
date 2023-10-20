@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -19,37 +18,66 @@ import (
 )
 
 func makeRelate(name string) alf.Directive {
-	var inputFormat string
+	var inputFormat, p1ID, p2ID string
 	supportedInputFormats := []string{"gedcom", "json"}
 	out := alf.Command{
+		Description: "calculate, describe relationship between people",
 		Setup: func(p flag.FlagSet) *flag.FlagSet {
-			name := bin + " " + name
-			flags := newFlagSet(name)
+			fullname := bin + " " + name
+			flags := newFlagSet(fullname)
 			flags.StringVar(&inputFormat, "f", supportedInputFormats[0], fmt.Sprintf("input format, one of %q", supportedInputFormats))
+			flags.StringVar(&p1ID, "p1", "", "id of person 1")
+			flags.StringVar(&p2ID, "p2", "", "id of person 2")
+
 			flags.Usage = func() {
-				fmt.Fprintf(flags.Output(), `Usage: %s [flags] < path/to/input
+				fmt.Fprintf(flags.Output(), `Usage: %s [ged-flags] %s [%s-flags] < path/to/input
 
 Description:
-	Pipe in some data, calculate relationship between 2 people.
+	Pipe in some input data, calculate relationship between 2 people.
+
+Format of input data:
 	The input data should represent an array of people ([]entity.Person).
 
-	The format of the input data could be gedcom.
+	The format of the input data could be "gedcom".
 
-	Or it could be json; see the parse subcommand format that json.
-	If it's json, then the input shape should be:
+	If the format is "json", then the shape of that data should be:
 		{
-			"people": []entity.Person{}
+		  "people": []entity.Person{}
 		}
+	See the parse subcommand to format that JSON.
+
+Choosing people to relate:
+	You must also select 2 people for which to calculate the relationship by
+	specifying their IDs. There are multiple ways to do this.
+
+	Directly, via flags -p1, -p2:
+		If you know both IDs ahead of time, you can input them directly via the
+		flags -p1 and p2. If you go this route, be sure to specify both values.
+
+	Via "fzf":
+		If you'd prefer to discover their IDs, you can do a fuzzy search.
+		This requires fzf, a really awesome fuzzy finder for the command line.
+		Check it out at:
+			https://github.com/junegunn/fzf
+		Once fzf is available, be sure to omit the flag values for -p1 and -p2.
+		The binary for fzf does not necessarily need to be in your PATH. You can
+		specify the path to fzf via the env var FZF_BIN.
 
 Examples:
-	# Using gedcom-formatted input
+	# Using gedcom-formatted data, use a fuzzy search to choose people to relate.
 	$ %s < path/to/data.ged
 
-	# Using json-formatted input. See above for expected shape of input data.
+	# Using json-formatted data.
 	$ %s -f json < path/to/data.json
 	$ jq '.' path/to/data.json | %s -f json
+
+	# Using gedcom-formatted data. Directly input person IDs.
+	$ %s -p1 @I111@ -p2 @I222@ < path/to/data.ged
+
+	# Using json-formatted data. Directly input person IDs.
+	$ %s -f json -p1 @I111@ -p2 @I222@ < path/to/data.json
 `,
-					name, name, name, name,
+					bin, name, name, fullname, fullname, fullname, fullname, fullname,
 				)
 				printFlagDefaults(flags)
 			}
@@ -57,9 +85,8 @@ Examples:
 		},
 		Run: func(ctx context.Context) (err error) {
 			var (
-				people     []*entity.Person
-				p1ID, p2ID string
-				r1, r2     entity.Lineage
+				people []*entity.Person
+				r1, r2 entity.Lineage
 			)
 			switch inputFormat {
 			case "json":
@@ -74,8 +101,13 @@ Examples:
 				}
 			}
 
-			if p1ID, p2ID, err = choosePeopleToRelate(ctx, people); err != nil {
+			if p1ID != "" && p2ID == "" || p1ID == "" && p2ID != "" {
+				err = fmt.Errorf("presence of flag values for -p1 (%q) and -p2 (%q) are mutually-exclusive; pass in values for both flags or omit both", p1ID, p2ID)
 				return
+			} else if p1ID == "" && p2ID == "" {
+				if p1ID, p2ID, err = choosePeopleToRelate(ctx, people); err != nil {
+					return
+				}
 			}
 
 			if r1, r2, err = srv.NewRelator(people).Relate(ctx, p1ID, p2ID); err != nil {
@@ -113,6 +145,51 @@ Examples:
 }
 
 func choosePeopleToRelate(ctx context.Context, people []*entity.Person) (p1ID, p2ID string, err error) {
+	chooser, err := newFZFChooser(ctx, people)
+	if errors.Is(err, errNoFZF) {
+		log.Error(ctx, nil, err, "install fzf for a better user experience; see https://github.com/junegunn/fzf")
+	}
+	if err != nil {
+		return
+	}
+
+	p1ID, err = chooser.choosePersonID(ctx)
+	if err != nil {
+		err = fmt.Errorf("error on choice 1: %w", err)
+		return
+	}
+
+	p2ID, err = chooser.choosePersonID(ctx)
+	if err != nil {
+		err = fmt.Errorf("error on choice 2: %w", err)
+		return
+	}
+	return
+}
+
+type (
+	personIDChooser interface {
+		choosePersonID(ctx context.Context) (id string, err error)
+	}
+
+	fzfChooser struct {
+		bin        string
+		inputLines []string
+	}
+)
+
+var errNoFZF = errors.New("fzf binary not available")
+
+func newFZFChooser(ctx context.Context, people []*entity.Person) (personIDChooser, error) {
+	fzf := os.Getenv("FZF_BIN")
+	if len(fzf) == 0 {
+		fzf = "fzf"
+	}
+	pathToBin, err := exec.LookPath(fzf)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errNoFZF, err)
+	}
+
 	inputLines := make([]string, len(people))
 	var inputLine []string
 	for i, person := range people {
@@ -136,39 +213,44 @@ func choosePeopleToRelate(ctx context.Context, people []*entity.Person) (p1ID, p
 		inputLines[i] = strings.Join(inputLine, "\t")
 	}
 
-	p1ID, err = fuzzyChooseID(ctx, inputLines)
-	if err != nil {
-		err = fmt.Errorf("error on choice 1: %w", err)
-		return
-	}
-
-	p2ID, err = fuzzyChooseID(ctx, inputLines)
-	if err != nil {
-		err = fmt.Errorf("error on choice 2: %w", err)
-		return
-	}
-
-	return
+	return &fzfChooser{bin: pathToBin, inputLines: inputLines}, nil
 }
 
-func fuzzyChooseID(ctx context.Context, inputLines []string) (out string, err error) {
+func (c *fzfChooser) choosePersonID(ctx context.Context) (out string, err error) {
+	// this part was adapted from https://github.com/junegunn/fzf/wiki/Language-bindings#go.
 	const fzfOptions = "--header 'pick person to compare (try fuzzy search)' --layout reverse --height 66% --info=inline --border --margin=1 --padding=1 --cycle"
+	shell := os.Getenv("SHELL")
+	if len(shell) == 0 {
+		shell = "sh"
+	}
 
-	filtered := withFilter(ctx, "fzf "+fzfOptions, func(in io.WriteCloser) {
-		for _, line := range inputLines {
-			fmt.Fprintln(in, line)
+	cmd := exec.CommandContext(ctx, shell, "-c", c.bin+" "+fzfOptions)
+	cmd.Stderr = os.Stderr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Error(ctx, nil, err, "stdin error")
+	}
+	go func() {
+		for _, line := range c.inputLines {
+			fmt.Fprintln(stdin, line)
 		}
-	})
+		if cerr := stdin.Close(); cerr != nil {
+			log.Error(ctx, nil, err, "could not close input pipe")
+		}
+	}()
+
+	var userChoice string
+	if result, rerr := cmd.Output(); rerr != nil {
+		err = rerr
+		return
+	} else {
+		before, after, found := strings.Cut(string(result), "\n")
+		log.Info(ctx, map[string]any{"before": before, "after": after, "found": found}, "")
+		userChoice = before
+	}
 
 	// parsing the user choice depends highly on the formatting done to the
 	// input line.
-	var userChoice string
-	if len(filtered) < 1 {
-		err = errors.New("no lines chosen")
-		return
-	} else if len(filtered) > 1 {
-		userChoice = filtered[0]
-	}
 	fields := strings.Fields(userChoice)
 	if len(fields) < 1 {
 		err = errors.New("it seems like an early exit")
@@ -183,34 +265,6 @@ func fuzzyChooseID(ctx context.Context, inputLines []string) (out string, err er
 
 	out = fieldParts[1]
 	return
-}
-
-// withFilter was lifted from https://github.com/junegunn/fzf/wiki/Language-bindings#go.
-func withFilter(ctx context.Context, command string, handleStdin func(in io.WriteCloser)) []string {
-	shell := os.Getenv("SHELL")
-	if len(shell) == 0 {
-		shell = "sh"
-	}
-
-	cmd := exec.CommandContext(ctx, shell, "-c", command)
-	cmd.Stderr = os.Stderr
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Error(ctx, nil, err, "stdin error")
-	}
-
-	go func() {
-		handleStdin(stdin)
-		if cerr := stdin.Close(); cerr != nil {
-			log.Error(ctx, nil, err, "could not close input pipe")
-		}
-	}()
-
-	result, err := cmd.Output()
-	if err != nil {
-		log.Error(ctx, nil, err, "stdout error")
-	}
-	return strings.Split(string(result), "\n")
 }
 
 func formatDate(in *time.Time) *string {
