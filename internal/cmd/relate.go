@@ -36,15 +36,18 @@ Description:
 	The format of the input data could be gedcom.
 
 	Or it could be json; see the parse subcommand format that json.
-	If it's json, then remember to pipe it array of entity.People.
+	If it's json, then the input shape should be:
+		{
+			"people": []entity.Person{}
+		}
 
 Examples:
 	# Using gedcom-formatted input
 	$ %s < path/to/data.ged
 
-	# Using json-formatted input. Remember to pipe it an array of People structs.
-	$ %s -f json < <(jq '.people' < path/to/data.json)
-	$ jq '.people' < path/to/data.json | %s -f json
+	# Using json-formatted input. See above for expected shape of input data.
+	$ %s -f json < path/to/data.json
+	$ jq '.' path/to/data.json | %s -f json
 `,
 					name, name, name, name,
 				)
@@ -60,9 +63,11 @@ Examples:
 			)
 			switch inputFormat {
 			case "json":
-				if err = readJSON(os.Stdin, &people); err != nil {
+				var data struct{ People []*entity.Person }
+				if err = readJSON(os.Stdin, &data); err != nil {
 					return
 				}
+				people = data.People
 			default:
 				if people, _, err = srv.ParseGedcom(ctx, os.Stdin); err != nil {
 					return
