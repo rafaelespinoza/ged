@@ -1,6 +1,7 @@
+#!/usr/bin/env -S just -f
+
 GO := "go"
-BIN_DIR := "bin"
-MAIN_BIN := BIN_DIR / "main"
+MAIN_BIN := "bin/main"
 
 SRC_PATHS := ". ./internal/..."
 
@@ -9,21 +10,20 @@ SRC_PATHS := ". ./internal/..."
 
 ARGS := ""
 
+RUN_DIR := "/tmp/ged"
+
 # list available recipes
 default:
-    just --list --unstable --unsorted -f {{ justfile() }}
-
-_bindir:
-    @mkdir -pv {{ BIN_DIR }}
+    @{{ justfile() }} --list --unstable --unsorted
 
 # compile a binary for package main
-build: _bindir
+build: _bin_dir
     @{{ GO }} build -o {{ MAIN_BIN }} {{ invocation_directory() }}
 
 alias b := build
 
 # execute the built binary
-run +ARGS:
+run +ARGS: _run_dir
     {{ MAIN_BIN }} {{ ARGS }}
 
 alias r := run
@@ -45,3 +45,9 @@ vet ARGS='':
 # run tests (override variable value ARGS to use test flags)
 test PKG_PATH='./...':
     {{ GO }} test {{ PKG_PATH }} {{ ARGS }}
+
+_bin_dir:
+    @mkdir -pv {{ parent_directory(MAIN_BIN) }}
+
+_run_dir:
+    @mkdir -pv {{ RUN_DIR }} && chmod 700 {{ RUN_DIR }}
