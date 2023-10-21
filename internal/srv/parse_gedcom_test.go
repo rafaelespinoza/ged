@@ -9,7 +9,7 @@ import (
 
 func TestParseGedcom(t *testing.T) {
 	// check that it can read data and that outputs are non-empty
-	for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged"} {
+	for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged", "simpsons.ged"} {
 		pathToFile := filepath.Join("..", "..", "testdata", testFilename)
 		file, err := os.Open(filepath.Clean(pathToFile))
 		if err != nil {
