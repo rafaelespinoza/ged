@@ -10,11 +10,9 @@ SRC_PATHS := ". ./internal/..."
 
 ARGS := ""
 
-RUN_DIR := "/tmp/ged"
-
 # list available recipes
 default:
-    @{{ justfile() }} --list --unstable --unsorted
+    @{{ justfile() }} --list --unsorted
 
 # compile a binary for package main
 build: _bin_dir
@@ -23,18 +21,18 @@ build: _bin_dir
 alias b := build
 
 # execute the built binary
-run +ARGS: _run_dir
+run +ARGS='help':
     {{ MAIN_BIN }} {{ ARGS }}
 
 alias r := run
 
 # build a new binary, run it
-buildrun +ARGS: build (run ARGS)
+buildrun +ARGS='help': build (run ARGS)
 
 alias br := buildrun
 
-# get dependencies and vendor them
-deps:
+# get module dependencies, tidy them up, vendor them
+mod:
     {{ GO }} mod tidy
     {{ GO }} mod vendor
 
@@ -48,6 +46,3 @@ test PKG_PATH='./...':
 
 _bin_dir:
     @mkdir -pv {{ parent_directory(MAIN_BIN) }}
-
-_run_dir:
-    @mkdir -pv {{ RUN_DIR }} && chmod 700 {{ RUN_DIR }}
