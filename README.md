@@ -1,5 +1,7 @@
 # ged
 
+[![build](https://github.com/rafaelespinoza/ged/actions/workflows/build.yaml/badge.svg)](https://github.com/rafaelespinoza/ged/actions/workflows/build.yaml)
+
 genealogical data tooling
 
 ## Features
