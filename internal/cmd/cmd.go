@@ -21,9 +21,9 @@ var (
 		logLevel   string
 		logFormat  string
 	}
-	// bin is the name of the binary.
-	bin = os.Args[0]
 )
+
+const mainName = "ged"
 
 // Root abstracts a top-level command from package main.
 type Root interface {
@@ -34,7 +34,7 @@ type Root interface {
 // New constructs a top-level command with subcommands.
 func New() Root {
 	del := &alf.Delegator{
-		Description: "main command for " + bin,
+		Description: "main command for " + mainName,
 		Subs: map[string]alf.Directive{
 			"draw":   makeDraw("draw"),
 			"parse":  makeParse("parse"),
@@ -42,33 +42,48 @@ func New() Root {
 		},
 	}
 
-	rootFlags := newFlagSet("ged")
+	rootFlags := newFlagSet(mainName)
 	rootFlags.BoolVar(&args.loggingOff, "q", false, "if true, then all logging is effectively off")
 	rootFlags.StringVar(&args.logLevel, "loglevel", validLoggingLevels[len(validLoggingLevels)-1].String(), fmt.Sprintf("minimum severity for which to log events, should be one of %q", validLoggingLevels))
 	rootFlags.StringVar(&args.logFormat, "logformat", validLoggingFormats[len(validLoggingFormats)-1], fmt.Sprintf("output format for logs, should be one of %q", validLoggingFormats))
-	rootFlags.Usage = func() {
-		fmt.Fprintf(rootFlags.Output(), `Usage: %s
 
-	The following flags should go before the command.
+	rootFlags.Usage = func() {
+		fmt.Fprintf(rootFlags.Output(), `%s
+
+Description:
+
+	%s processes genealogical data in GEDCOM format.
+	GEDCOM is a defacto standard format, read more at https://gedcom.io
+
+	There are top-level flags, defined here, which may apply to any subcommand.
+	Logging messages may be useful for extra runtime introspection as the
+	program traverses the input data or is calculating something. Messages are
+	structured data, written to STDERR. Messages have an associated "Level", to
+	describe the severity of an event.
+
+	Each subcommand may have its own flags, which would be defined there.
+
+	The following flags are top-level and should go before the subcommand.
 `,
-			bin)
+			initUsageLine("subcommand"), mainName)
 		printFlagDefaults(rootFlags)
+
 		fmt.Fprintf(
 			rootFlags.Output(), `
-Commands:
+Subcommands:
 
-	These will have their own set of flags. Put them after the command.
+	These will have their own set of flags. Put them after the subcommand.
 
 	%v
 
 Examples:
 
-	%s [ged-flags] <command> -h
-	%s -loglevel INFO <command>
-	%s -logformat json <command>
-	%s -logformat text -loglevel WARN <command>
+	%s [%s-flags] <subcommand> -h
+	%s -loglevel INFO <subcommand> [subcommand-flags]
+	%s -logformat json <subcommand> [subcommand-flags]
+	%s -logformat text -loglevel WARN <subcommand> [subcommand-flags]
 `,
-			strings.Join(del.DescribeSubcommands(), "\n\t"), bin, bin, bin, bin)
+			strings.Join(del.DescribeSubcommands(), "\n\t"), mainName, mainName, mainName, mainName, mainName)
 	}
 
 	del.Flags = rootFlags
@@ -136,9 +151,13 @@ func newFlagSet(name string) (out *flag.FlagSet) {
 // printFlagDefaults calls PrintDefaults on f. It helps make help message
 // formatting more consistent.
 func printFlagDefaults(f *flag.FlagSet) {
-	fmt.Fprintf(f.Output(), "\n%s flags:\n\n", f.Name())
+	fmt.Fprintf(f.Output(), "\nFlags for %s:\n\n", f.Name())
 	f.PrintDefaults()
 }
 
 func readJSON(in io.Reader, out any) error    { return json.NewDecoder(in).Decode(out) }
 func writeJSON(out io.Writer, data any) error { return json.NewEncoder(out).Encode(data) }
+
+func initUsageLine(subcmd string) string {
+	return fmt.Sprintf("Usage: %s [%s-flags] %s [%s-flags]", mainName, mainName, subcmd, subcmd)
+}

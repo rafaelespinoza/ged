@@ -17,10 +17,12 @@ func makeParse(name string) alf.Directive {
 	out := alf.Command{
 		Description: "read GEDCOM data from STDIN, transform to entity types, write to STDOUT",
 		Setup: func(_ flag.FlagSet) *flag.FlagSet {
-			flags := newFlagSet(name)
+			fullName := mainName + " " + name
+			flags := newFlagSet(fullName)
 			flags.StringVar(&inputFormat, "f", "gedcom", fmt.Sprintf("input format, one of %q", supportedInputFormats))
+
 			flags.Usage = func() {
-				fmt.Fprintf(flags.Output(), `Usage: %s [flags] < path/to/input
+				fmt.Fprintf(flags.Output(), `%s < path/to/input
 
 Description:
 	Pipe in some data, interpret it and print the transformed results to STDOUT as JSON.
@@ -33,11 +35,11 @@ Description:
 
 	The output shape:
 		{
-			"people": []entity.Person{}.
-			"unions": []entity.Union{},
+		  "people": []entity.Person{}.
+		  "unions": []entity.Union{},
 		}
 `,
-					name, supportedInputFormats,
+					initUsageLine(name), supportedInputFormats,
 				)
 				printFlagDefaults(flags)
 			}

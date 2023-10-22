@@ -23,14 +23,14 @@ func makeRelate(name string) alf.Directive {
 	out := alf.Command{
 		Description: "calculate, describe relationship between people",
 		Setup: func(p flag.FlagSet) *flag.FlagSet {
-			fullname := bin + " " + name
-			flags := newFlagSet(fullname)
+			fullName := mainName + " " + name
+			flags := newFlagSet(fullName)
 			flags.StringVar(&inputFormat, "f", supportedInputFormats[0], fmt.Sprintf("input format, one of %q", supportedInputFormats))
 			flags.StringVar(&p1ID, "p1", "", "id of person 1")
 			flags.StringVar(&p2ID, "p2", "", "id of person 2")
 
 			flags.Usage = func() {
-				fmt.Fprintf(flags.Output(), `Usage: %s [ged-flags] %s [%s-flags] < path/to/input
+				fmt.Fprintf(flags.Output(), `%s < path/to/input
 
 Description:
 	Pipe in some input data, calculate relationship between 2 people.
@@ -77,7 +77,7 @@ Examples:
 	# Using json-formatted data. Directly input person IDs.
 	$ %s -f json -p1 @I111@ -p2 @I222@ < path/to/data.json
 `,
-					bin, name, name, fullname, fullname, fullname, fullname, fullname,
+					initUsageLine(name), fullName, fullName, fullName, fullName, fullName,
 				)
 				printFlagDefaults(flags)
 			}

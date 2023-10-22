@@ -17,11 +17,12 @@ func makeDraw(name string) alf.Directive {
 	out := alf.Command{
 		Description: "generate a family tree",
 		Setup: func(p flag.FlagSet) *flag.FlagSet {
-			fullname := bin + " " + name
-			flags := newFlagSet(fullname)
+			fullName := mainName + " " + name
+			flags := newFlagSet(fullName)
 			flags.StringVar(&inputFormat, "f", supportedInputFormats[0], fmt.Sprintf("input format, one of %q", supportedInputFormats))
+
 			flags.Usage = func() {
-				fmt.Fprintf(flags.Output(), `Usage: %s [ged-flags] %s [%s-flags] < path/to/input
+				fmt.Fprintf(flags.Output(), `%s < path/to/input
 
 Description:
 	Pipe in some data, draw a family tree as a mermaid flowchart to STDOUT.
@@ -43,7 +44,7 @@ Examples:
 	$ %s -f json < path/to/data.json
 	$ jq '.' path/to/data.json | %s -f json
 `,
-					bin, name, name, fullname, fullname, fullname,
+					initUsageLine(name), fullName, fullName, fullName,
 				)
 				printFlagDefaults(flags)
 			}
