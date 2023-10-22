@@ -9,4 +9,5 @@ type Union struct {
 	Person2   *Person
 	StartDate *time.Time
 	EndDate   *time.Time
+	Children  []*Person
 }

@@ -174,6 +174,16 @@ func convertGedcomFamilies(ctx context.Context, records []*gedcom.FamilyRecord, 
 			}, "discarding extra partner references in family")
 		}
 
+		children := make([]*entity.Person, len(family.ChildXrefs))
+		for i, childID := range family.ChildXrefs {
+			child, ok := peopleByGCID[childID]
+			if !ok {
+				return nil, fmt.Errorf("child %q not found for family %q", childID, family.Xref)
+			}
+			children[i] = simplifyPerson(child)
+		}
+		union.Children = children
+
 		out[family.Xref] = &union
 	}
 

@@ -57,6 +57,12 @@ func TestParseGedcom(t *testing.T) {
 			if union.Person2 != nil && union.Person2.ID == "" {
 				t.Error("person 2 in union has empty ID")
 			}
+
+			for _, child := range union.Children {
+				if child.ID == "" {
+					t.Errorf("empty ID for child %q of person %q", child.Name.Full(), union.ID)
+				}
+			}
 		}
 	}
 }
