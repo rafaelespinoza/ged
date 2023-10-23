@@ -16,6 +16,7 @@ import (
 type Records struct {
 	Individuals []*IndividualRecord
 	Families    []*FamilyRecord
+	Sources     []*SourceRecord
 }
 
 // ReadRecords reads constructs Records out of the input document r.
@@ -57,9 +58,15 @@ func ReadRecords(ctx context.Context, r io.Reader) (*Records, error) {
 				return nil, fmt.Errorf("error parsing family record, line=%q: %w", line.String(), err)
 			}
 			out.Families = append(out.Families, family)
+		case "SOUR":
+			source, err := parseSourceRecord(ctx, i, line, node.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing source record, line=%q: %w", line.String(), err)
+			}
+			out.Sources = append(out.Sources, source)
 		default:
 			fields := map[string]any{
-				"func": "newRecords",
+				"func": "ReadRecords",
 				"i":    i,
 				"line": line.Text,
 				"tag":  line.Tag,
