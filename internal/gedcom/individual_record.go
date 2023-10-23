@@ -21,6 +21,7 @@ type IndividualRecord struct {
 	Death             *Event
 	FamiliesAsChild   []string // Xref IDs of families where the person is a child.
 	FamiliesAsPartner []string // Xref IDs of families where the person is a partner, such as a spouse.
+	SourceCitations   []*SourceCitation
 }
 
 func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes []*gedcom.Node) (out *IndividualRecord, err error) {
@@ -46,20 +47,20 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 
 		switch subline.Tag {
 		case "NAME":
-			name, err := newPersonalName(subline, subnode.GetSubnodes())
+			name, err := parsePersonalName(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				return nil, fmt.Errorf("error parsing personal name: %w", err)
 			}
 			out.Names = append(out.Names, *name)
 		case "BIRT":
-			event, err := newEvent(subline, subnode.GetSubnodes())
+			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing BIRT, skipping")
 			} else {
 				out.Birth = event
 			}
 		case "DEAT":
-			event, err := newEvent(subline, subnode.GetSubnodes())
+			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing DEAT, skipping")
 			} else {
@@ -71,6 +72,12 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 			out.FamiliesAsChild = append(out.FamiliesAsChild, subline.Payload)
 		case "FAMS":
 			out.FamiliesAsPartner = append(out.FamiliesAsPartner, subline.Payload)
+		case "SOUR":
+			citation, err := parseSourceCitation(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing source citation: %w", err)
+			}
+			out.SourceCitations = append(out.SourceCitations, citation)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

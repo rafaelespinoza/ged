@@ -1,6 +1,8 @@
 package gedcom
 
 import (
+	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -8,12 +10,14 @@ import (
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
 	"github.com/rafaelespinoza/ged/internal/gedcom/enumset"
+	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 // PersonalName is an individual's name. Its URI is g7:INDI-NAME.
 type PersonalName struct {
-	Payload string
-	Type    enumset.NameType
+	Payload         string
+	Type            enumset.NameType
+	SourceCitations []*SourceCitation
 
 	// The following fields are PERSONAL_NAME_PIECES.
 	NamePrefix    string // URI is g7:NPFX
@@ -26,7 +30,8 @@ type PersonalName struct {
 
 var surnamePattern = regexp.MustCompile(`(\/[A-z|\s]*\/)`)
 
-func newPersonalName(line *gedcom7.Line, subnodes []*gedcom.Node) (out *PersonalName, err error) {
+func parsePersonalName(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node) (out *PersonalName, err error) {
+
 	out = &PersonalName{Payload: line.Payload}
 
 	var subline *gedcom7.Line
@@ -35,6 +40,14 @@ func newPersonalName(line *gedcom7.Line, subnodes []*gedcom.Node) (out *Personal
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
+
+		fields := map[string]any{
+			"func":    "newPersonalName",
+			"line":    line.Text,
+			"subtag":  subline.Tag,
+			"subline": subline.Text,
+		}
+		log.Debug(ctx, fields, "")
 
 		payload := subline.Payload
 
@@ -51,10 +64,16 @@ func newPersonalName(line *gedcom7.Line, subnodes []*gedcom.Node) (out *Personal
 			out.Surname = payload
 		case "NSFX":
 			out.NameSuffix = payload
+		case "SOUR":
+			citation, err := parseSourceCitation(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing source citation: %w", err)
+			}
+			out.SourceCitations = append(out.SourceCitations, citation)
 		default:
-			// There may be some metadata-related tags such as NAME-TYPE, SOUR
-			// (Source), or NOTE. For now, not parsing those, but might try to
-			// do so later.
+			// There may be some metadata-related tags such as NAME-TYPE , or
+			// NOTE. For now, not parsing those, but might try to do so later.
+			log.Warn(ctx, fields, "unsupported Tag")
 		}
 	}
 

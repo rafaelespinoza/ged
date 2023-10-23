@@ -2,6 +2,7 @@ package gedcom
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
@@ -11,12 +12,13 @@ import (
 
 // FamilyRecord is a record structure for a family. Its URI g7:record-FAM.
 type FamilyRecord struct {
-	Xref        string
-	ParentXrefs []string
-	ChildXrefs  []string
-	MarriedAt   *Event
-	DivorcedAt  *Event
-	AnnulledAt  *Event
+	Xref            string
+	ParentXrefs     []string
+	ChildXrefs      []string
+	MarriedAt       *Event
+	DivorcedAt      *Event
+	AnnulledAt      *Event
+	SourceCitations []*SourceCitation
 }
 
 func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes []*gedcom.Node) (out *FamilyRecord, err error) {
@@ -46,26 +48,32 @@ func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 		case "CHIL":
 			out.ChildXrefs = append(out.ChildXrefs, subline.Payload)
 		case "MARR":
-			event, err := newEvent(subline, subnode.GetSubnodes())
+			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing MARR, skipping")
 			} else {
 				out.MarriedAt = event
 			}
 		case "DIV":
-			event, err := newEvent(subline, subnode.GetSubnodes())
+			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing DIV, skipping")
 			} else {
 				out.DivorcedAt = event
 			}
 		case "ANUL":
-			event, err := newEvent(subline, subnode.GetSubnodes())
+			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing ANUL, skipping")
 			} else {
 				out.AnnulledAt = event
 			}
+		case "SOUR":
+			citation, err := parseSourceCitation(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing source citation: %w", err)
+			}
+			out.SourceCitations = append(out.SourceCitations, citation)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

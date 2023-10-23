@@ -1,6 +1,7 @@
 package gedcom
 
 import (
+	"context"
 	"testing"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
@@ -21,7 +22,7 @@ func TestPersonalName(t *testing.T) {
 		for _, subline := range test.Sublines {
 			input = input.AddSubnode(subline)
 		}
-		got, err := newPersonalName(test.Line, input.GetSubnodes())
+		got, err := parsePersonalName(context.Background(), test.Line, input.GetSubnodes())
 		if err != nil {
 			t.Fatal(err)
 		}
