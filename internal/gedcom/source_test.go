@@ -59,38 +59,19 @@ func TestSourceCitationPage(t *testing.T) {
 				t.Errorf("wrong Payload; got %q, exp %q", actual.Payload, expected.Payload)
 			}
 
-			if len(actual.Components) != len(expected.Components) {
-				t.Errorf("wrong number of Components; got %d, exp %d", len(actual.Components), len(expected.Components))
-			} else {
-				for i, got := range actual.Components {
-					exp := expected.Components[i]
-					if got != exp {
-						t.Errorf("item[%d]; got %q, exp %q", i, got, exp)
-					}
-				}
-			}
-
-			if len(actual.Tuples) != len(expected.Tuples) {
-				t.Errorf("wrong number of Tuples; got %d, exp %d", len(actual.Tuples), len(expected.Tuples))
-			} else {
-				for key, exp := range expected.Tuples {
-					got, ok := actual.Tuples[key]
-					if !ok {
-						t.Errorf("expected a key %q, but not found", key)
-					} else if got != exp {
-						t.Errorf("item[%q]; got %q, exp %q", key, got, exp)
-					}
-				}
-
-				for key, got := range actual.Tuples {
-					exp, ok := expected.Tuples[key]
-					if !ok {
-						t.Errorf("unexpected key %q", key)
-					} else if got != exp {
-						t.Errorf("item[%q]; got %q, exp %q", key, got, exp)
-					}
-				}
-			}
+			cmpStringSlices(t, "", actual.Components, expected.Components)
+			cmpStringMaps(t, "", actual.Tuples, expected.Tuples)
 		})
 	}
+}
+
+func cmpSourceCitation(t *testing.T, errMsgPrefix string, got, exp *gedcom.SourceCitation) {
+	if got.Xref != exp.Xref {
+		t.Errorf("%swrong Xref; got %q, exp %q", errMsgPrefix, got.Xref, exp.Xref)
+	}
+	if got.Page != exp.Page {
+		t.Errorf("%swrong Page; got %q, exp %q", errMsgPrefix, got.Page, exp.Page)
+	}
+
+	cmpStringMaps(t, errMsgPrefix, got.Data, exp.Data)
 }

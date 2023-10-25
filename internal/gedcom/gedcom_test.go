@@ -2,8 +2,10 @@ package gedcom_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -151,6 +153,8 @@ func TestReadRecordsFields(t *testing.T) {
 1 MARR
 2 TYPE marriage
 2 DATE 18 JUN 1985
+2 SOUR @S1@
+3 PAGE front page
 1 DIV
 2 TYPE divorce
 2 DATE 2000
@@ -182,191 +186,141 @@ func TestReadRecordsFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expFamilies := []*gedcom.FamilyRecord{
-		{
-			Xref:        "@F1@",
-			ParentXrefs: []string{"@I1@", "@I2@"},
-			ChildXrefs:  []string{"@I3@"},
-			MarriedAt:   &gedcom.Event{Date: mustParseDate(t, "1985-01-18")},
-			DivorcedAt:  &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
-			AnnulledAt:  &gedcom.Event{Date: mustParseDate(t, "2001-01-01")},
-		},
-	}
-	if len(records.Families) != len(expFamilies) {
-		t.Fatalf("got %d record(s) but expected %d", len(records.Families), len(expFamilies))
-	}
-
-	for i, got := range records.Families {
-		exp := expFamilies[i]
-		if got.Xref != exp.Xref {
-			t.Fatalf("item[%d]; wrong Xref; got %q, exp %q", i, got.Xref, exp.Xref)
-		}
-
-		if len(got.ParentXrefs) != len(exp.ParentXrefs) {
-			t.Errorf("item[%d]; wrong number of ParentXrefs; got %d, exp %d", i, len(got.ParentXrefs), len(exp.ParentXrefs))
-		} else {
-			for j, xref := range got.ParentXrefs {
-				if xref != exp.ParentXrefs[j] {
-					t.Errorf("item[%d].ParentXrefs[%d] wrong value, got %q, exp %q", i, j, xref, exp.ParentXrefs[j])
-				}
-			}
-		}
-
-		if len(got.ChildXrefs) != len(exp.ChildXrefs) {
-			t.Errorf("item[%d]; wrong number of ChildXrefs; got %d, exp %d", i, len(got.ChildXrefs), len(exp.ChildXrefs))
-		} else {
-			for j, xref := range got.ChildXrefs {
-				if xref != exp.ChildXrefs[j] {
-					t.Errorf("item[%d].ChildXrefs[%d] wrong value, got %q, exp %q", i, j, xref, exp.ChildXrefs[j])
-				}
-			}
-		}
-	}
-
-	expIndividuals := []*gedcom.IndividualRecord{
-		{
-			Xref: "@I1@",
-			Names: []gedcom.PersonalName{
-				{Payload: "Charlie /Foxtrot/", Given: "Charlie", Nickname: "Chuck", Surname: "Foxtrot"},
+	t.Run("Families", func(t *testing.T) {
+		expected := []*gedcom.FamilyRecord{
+			{
+				Xref:        "@F1@",
+				ParentXrefs: []string{"@I1@", "@I2@"},
+				ChildXrefs:  []string{"@I3@"},
+				MarriedAt:   &gedcom.Event{Date: mustParseDate(t, "1985-01-18")},
+				DivorcedAt:  &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
+				AnnulledAt:  &gedcom.Event{Date: mustParseDate(t, "2001-01-01")},
 			},
-			Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
-			Death:             &gedcom.Event{Date: mustParseDate(t, "2038-01-19")},
-			FamiliesAsPartner: []string{"@F1@"},
-		},
-		{
-			Xref: "@I2@",
-			Names: []gedcom.PersonalName{
-				{Payload: "Charlene /Foxtrot/", Given: "Charlene", Nickname: "Y2K22", Surname: "Foxtrot"},
+		}
+		if len(records.Families) != len(expected) {
+			t.Fatalf("got %d record(s) but expected %d", len(records.Families), len(expected))
+		}
+
+		for i, got := range records.Families {
+			errMsgPrefix := fmt.Sprintf("item[%d]", i)
+			exp := expected[i]
+
+			if got.Xref != exp.Xref {
+				t.Fatalf("%swrong Xref; got %q, exp %q", errMsgPrefix+"; ", got.Xref, exp.Xref)
+			}
+
+			cmpStringSlices(t, errMsgPrefix+".ParentXrefs", got.ParentXrefs, exp.ParentXrefs)
+			cmpStringSlices(t, errMsgPrefix+".ChildXrefs", got.ChildXrefs, exp.ChildXrefs)
+		}
+	})
+
+	t.Run("Individuals", func(t *testing.T) {
+		expected := []*gedcom.IndividualRecord{
+			{
+				Xref: "@I1@",
+				Names: []gedcom.PersonalName{
+					{Payload: "Charlie /Foxtrot/", Given: "Charlie", Nickname: "Chuck", Surname: "Foxtrot"},
+				},
+				Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
+				Death:             &gedcom.Event{Date: mustParseDate(t, "2038-01-19")},
+				FamiliesAsPartner: []string{"@F1@"},
 			},
-			Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
-			Death:             &gedcom.Event{Date: mustParseDate(t, "2022-01-01")},
-			FamiliesAsPartner: []string{"@F1@"},
-		},
-		{
-			Xref: "@I3@",
-			Names: []gedcom.PersonalName{
-				{Payload: "Mike /Foxtrot/", Given: "Mike", Nickname: "Millennium Bug", Surname: "Foxtrot"},
+			{
+				Xref: "@I2@",
+				Names: []gedcom.PersonalName{
+					{Payload: "Charlene /Foxtrot/", Given: "Charlene", Nickname: "Y2K22", Surname: "Foxtrot"},
+				},
+				Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
+				Death:             &gedcom.Event{Date: mustParseDate(t, "2022-01-01")},
+				FamiliesAsPartner: []string{"@F1@"},
 			},
-			Birth:           &gedcom.Event{Date: mustParseDate(t, "1995-06-12")},
-			Death:           &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
-			FamiliesAsChild: []string{"@F1@"},
-		},
-	}
-	if len(records.Individuals) != len(expIndividuals) {
-		t.Fatalf("got %d record(s) but expected %d", len(records.Individuals), len(expIndividuals))
-	}
-
-	for i, got := range records.Individuals {
-		exp := expIndividuals[i]
-		if got.Xref != exp.Xref {
-			t.Fatalf("item[%d]; wrong Xref; got %q, exp %q", i, got.Xref, exp.Xref)
+			{
+				Xref: "@I3@",
+				Names: []gedcom.PersonalName{
+					{Payload: "Mike /Foxtrot/", Given: "Mike", Nickname: "Millennium Bug", Surname: "Foxtrot"},
+				},
+				Birth:           &gedcom.Event{Date: mustParseDate(t, "1995-06-12")},
+				Death:           &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
+				FamiliesAsChild: []string{"@F1@"},
+			},
+		}
+		if len(records.Individuals) != len(expected) {
+			t.Fatalf("got %d record(s) but expected %d", len(records.Individuals), len(expected))
 		}
 
-		if len(got.Names) != len(exp.Names) {
-			t.Errorf("item[%d]; wrong number of Names; got %d, exp %d", i, len(got.Names), len(exp.Names))
-		} else {
-			for j, name := range got.Names {
-				if name.Payload != exp.Names[j].Payload {
-					t.Errorf("item[%d].Names[%d] wrong Payload, got %q, exp %q", i, j, name.Payload, exp.Names[j].Payload)
-				}
-				if name.NamePrefix != exp.Names[j].NamePrefix {
-					t.Errorf("item[%d].Names[%d] wrong NamePrefix, got %q, exp %q", i, j, name.NamePrefix, exp.Names[j].NamePrefix)
-				}
-				if name.Given != exp.Names[j].Given {
-					t.Errorf("item[%d].Names[%d] wrong Given, got %q, exp %q", i, j, name.Given, exp.Names[j].Given)
-				}
-				if name.Nickname != exp.Names[j].Nickname {
-					t.Errorf("item[%d].Names[%d] wrong Nickname, got %q, exp %q", i, j, name.Nickname, exp.Names[j].Nickname)
-				}
-				if name.SurnamePrefix != exp.Names[j].SurnamePrefix {
-					t.Errorf("item[%d].Names[%d] wrong SurnamePrefix, got %q, exp %q", i, j, name.SurnamePrefix, exp.Names[j].SurnamePrefix)
-				}
-				if name.Surname != exp.Names[j].Surname {
-					t.Errorf("item[%d].Names[%d] wrong Surname, got %q, exp %q", i, j, name.Surname, exp.Names[j].Surname)
-				}
-				if name.NameSuffix != exp.Names[j].NameSuffix {
-					t.Errorf("item[%d].Names[%d] wrong NameSuffix, got %q, exp %q", i, j, name.NameSuffix, exp.Names[j].NameSuffix)
+		for i, got := range records.Individuals {
+			errMsgPrefix := fmt.Sprintf("item[%d]", i)
+			exp := expected[i]
+
+			if got.Xref != exp.Xref {
+				t.Fatalf("%s; wrong Xref; got %q, exp %q", errMsgPrefix, got.Xref, exp.Xref)
+			}
+
+			if len(got.Names) != len(exp.Names) {
+				t.Errorf("%s; wrong number of Names; got %d, exp %d", errMsgPrefix, len(got.Names), len(exp.Names))
+			} else {
+				for j, name := range got.Names {
+					errMsgPrefix := fmt.Sprintf("%s.Names[%d]", errMsgPrefix, j)
+					cmpPersonalName(t, errMsgPrefix, name, exp.Names[j])
 				}
 			}
+
+			cmpStringSlices(t, errMsgPrefix+".FamiliesAsPartner", got.FamiliesAsPartner, exp.FamiliesAsPartner)
+			cmpStringSlices(t, errMsgPrefix+".FamiliesAsChild", got.FamiliesAsChild, exp.FamiliesAsChild)
+		}
+	})
+
+	t.Run("Sources", func(t *testing.T) {
+		expected := []*gedcom.SourceRecord{
+			{
+				Xref:          "@S1@",
+				Title:         "New York Times, March 4, 1946, pp. 1,3.",
+				Note:          "Geneanet Community Trees Index",
+				Text:          "yes",
+				RepositoryIDs: []string{"@R0@"},
+			},
+			{
+				Xref:          "@S2@",
+				Title:         "Texas, U.S., Death Certificates, 1903-1982",
+				Author:        "Ancestry.com",
+				Publication:   "Ancestry.com Operations, Inc.",
+				RepositoryIDs: []string{"@R1@"},
+			},
+		}
+		if len(records.Sources) != len(expected) {
+			t.Fatalf("got %d record(s) but expected %d", len(records.Sources), len(expected))
 		}
 
-		if len(got.FamiliesAsPartner) != len(exp.FamiliesAsPartner) {
-			t.Errorf("item[%d]; wrong number of FamiliesAsPartner; got %d, exp %d", i, len(got.FamiliesAsPartner), len(exp.FamiliesAsPartner))
-		} else {
-			for j, xref := range got.FamiliesAsPartner {
-				if xref == "" {
-					t.Errorf("item[%d].Names[%d] wrong value, got %q, exp %q", i, j, xref, exp.FamiliesAsPartner[j])
-				}
+		for i, got := range records.Sources {
+			errMsgPrefix := fmt.Sprintf("item[%d]", i)
+			exp := expected[i]
+
+			if got.Xref != exp.Xref {
+				t.Fatalf("%s; wrong Xref; got %q, exp %q", errMsgPrefix, got.Xref, exp.Xref)
 			}
-		}
 
-		if len(got.FamiliesAsChild) != len(exp.FamiliesAsChild) {
-			t.Errorf("item[%d]; wrong number of FamiliesAsChild; got %d, exp %d", i, len(got.FamiliesAsChild), len(exp.FamiliesAsChild))
-		} else {
-			for j, xref := range got.FamiliesAsChild {
-				if xref == "" {
-					t.Errorf("item[%d].Names[%d] wrong value, got %q, exp %q", i, j, xref, exp.FamiliesAsChild[j])
-				}
+			if got.Title != exp.Title {
+				t.Errorf("%s; wrong Title, got %q, exp %q", errMsgPrefix, got.Title, exp.Title)
 			}
-		}
-	}
-
-	expSources := []*gedcom.SourceRecord{
-		{
-			Xref:          "@S1@",
-			Title:         "New York Times, March 4, 1946, pp. 1,3.",
-			Note:          "Geneanet Community Trees Index",
-			Text:          "yes",
-			RepositoryIDs: []string{"@R0@"},
-		},
-		{
-			Xref:          "@S2@",
-			Title:         "Texas, U.S., Death Certificates, 1903-1982",
-			Author:        "Ancestry.com",
-			Publication:   "Ancestry.com Operations, Inc.",
-			RepositoryIDs: []string{"@R1@"},
-		},
-	}
-	if len(records.Sources) != len(expSources) {
-		t.Fatalf("got %d record(s) but expected %d", len(records.Sources), len(expSources))
-	}
-
-	for i, got := range records.Sources {
-		exp := expSources[i]
-		if got.Xref != exp.Xref {
-			t.Fatalf("item[%d]; wrong Xref; got %q, exp %q", i, got.Xref, exp.Xref)
-		}
-
-		if got.Title != exp.Title {
-			t.Errorf("item[%d] wrong Title, got %q, exp %q", i, got.Title, exp.Title)
-		}
-		if got.Author != exp.Author {
-			t.Errorf("item[%d] wrong Author, got %q, exp %q", i, got.Author, exp.Author)
-		}
-		if got.Abbreviation != exp.Abbreviation {
-			t.Errorf("item[%d] wrong Abbreviation, got %q, exp %q", i, got.Abbreviation, exp.Abbreviation)
-		}
-		if got.Publication != exp.Publication {
-			t.Errorf("item[%d] wrong Publication, got %q, exp %q", i, got.Publication, exp.Publication)
-		}
-		if got.Text != exp.Text {
-			t.Errorf("item[%d] wrong Text, got %q, exp %q", i, got.Text, exp.Text)
-		}
-		if got.Note != exp.Note {
-			t.Errorf("item[%d] wrong Note, got %q, exp %q", i, got.Note, exp.Note)
-		}
-
-		if len(got.RepositoryIDs) != len(exp.RepositoryIDs) {
-			t.Errorf("item[%d]; wrong number of RepositoryIDs; got %d, exp %d", i, len(got.RepositoryIDs), len(exp.RepositoryIDs))
-		} else {
-			for j, gotID := range got.RepositoryIDs {
-				expID := exp.RepositoryIDs[j]
-				if gotID != expID {
-					t.Errorf("item[%d].RepositoryIDs[%d] wrong value, got %q, exp %q", i, j, gotID, expID)
-				}
+			if got.Author != exp.Author {
+				t.Errorf("%s; wrong Author, got %q, exp %q", errMsgPrefix, got.Author, exp.Author)
 			}
+			if got.Abbreviation != exp.Abbreviation {
+				t.Errorf("%s; wrong Abbreviation, got %q, exp %q", errMsgPrefix, got.Abbreviation, exp.Abbreviation)
+			}
+			if got.Publication != exp.Publication {
+				t.Errorf("%s; wrong Publication, got %q, exp %q", errMsgPrefix, got.Publication, exp.Publication)
+			}
+			if got.Text != exp.Text {
+				t.Errorf("%s; wrong Text, got %q, exp %q", errMsgPrefix, got.Text, exp.Text)
+			}
+			if got.Note != exp.Note {
+				t.Errorf("%s; wrong Note, got %q, exp %q", errMsgPrefix, got.Note, exp.Note)
+			}
+
+			cmpStringSlices(t, errMsgPrefix+".RepositoryIDs", got.RepositoryIDs, exp.RepositoryIDs)
 		}
-	}
+	})
 }
 
 func mustParseDate(t *testing.T, d string) *time.Time {
@@ -377,4 +331,76 @@ func mustParseDate(t *testing.T, d string) *time.Time {
 		t.Fatal(err)
 	}
 	return &out
+}
+
+func cmpStringSlices(t *testing.T, errMsgPrefix string, actual, expected []string) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("%swrong length; got %d, exp %d", errMsgPrefix, len(actual), len(expected))
+	} else {
+		for i, got := range actual {
+			exp := expected[i]
+
+			if got != exp {
+				// Q: why isn't this test helper function going full ham on generics?
+				// A: 1) there aren't any types to compare other than []string
+				// right now. 2) error message formatting is compromised b/c you
+				// cannot use the print directive %q unless the underlying type
+				// is string. That directive is valuable for showing any extra
+				// whitespace on either end of the value.
+				t.Errorf("%s[%d]; got %q, exp %q", errMsgPrefix, i, exp, exp)
+			}
+		}
+	}
+}
+
+func cmpStringMaps(t *testing.T, errMsgPrefix string, actual, expected map[string]string) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("%swrong number of keys; got %d, exp %d", errMsgPrefix, len(actual), len(expected))
+	}
+
+	var ok bool
+
+	// compare keys
+	missingExpectedKeys := make([]string, 0, len(expected))
+	for key := range expected {
+		if _, ok = actual[key]; !ok {
+			missingExpectedKeys = append(missingExpectedKeys, key)
+		}
+	}
+	missingExpectedKeys = slices.Clip(missingExpectedKeys)
+
+	if len(missingExpectedKeys) > 0 {
+		slices.Sort(missingExpectedKeys)
+		t.Errorf("%smissing %d expected keys %q", errMsgPrefix, len(missingExpectedKeys), missingExpectedKeys)
+	}
+
+	unexpectedKeys := make([]string, 0, len(actual))
+	for key := range actual {
+		_, ok = expected[key]
+		if !ok {
+			unexpectedKeys = append(unexpectedKeys, key)
+		}
+	}
+	unexpectedKeys = slices.Clip(unexpectedKeys)
+
+	if len(unexpectedKeys) > 0 {
+		slices.Sort(unexpectedKeys)
+		t.Errorf("%sgot %d expected key(s) %q", errMsgPrefix, len(unexpectedKeys), unexpectedKeys)
+	}
+
+	// compare values
+	for key, got := range actual {
+		exp, ok := expected[key]
+		if !ok {
+			continue
+		}
+
+		if got != exp {
+			t.Errorf("%s[%v]; got %q, exp %q", errMsgPrefix, key, got, exp)
+		}
+	}
 }
