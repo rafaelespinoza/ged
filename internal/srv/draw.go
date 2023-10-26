@@ -2,7 +2,9 @@ package srv
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -11,19 +13,30 @@ import (
 )
 
 type DrawParams struct {
-	Out    io.Writer
-	People []*entity.Person
-	Unions []*entity.Union
+	Out       io.Writer
+	Direction string
+	DisplayID bool
+	People    []*entity.Person
+	Unions    []*entity.Union
 }
 
+// ValidFlowchartDirections defines Mermaid-specific orientations for a
+// flowchart. More info is at https://mermaid.js.org/syntax/flowchart.html#direction.
+var ValidFlowchartDirections = []string{"TB", "TD", "BT", "RL", "LR"}
+
 func Draw(ctx context.Context, p DrawParams) error {
+	if !slices.Contains(ValidFlowchartDirections, p.Direction) {
+		return fmt.Errorf("invalid Direction %q, valid ones are: %q", p.Direction, ValidFlowchartDirections)
+	}
+
 	tmpl, err := template.New("").Parse(mermaidFlowchartFamilyTree)
 	if err != nil {
 		return err
 	}
 
 	type ExecData struct {
-		PeopleIDs []string
+		FlowChartDirection string
+		PeopleIDs          []string
 		// PeopleByID is a pointer type to simplify emptiness checks
 		// inside of template.
 		PeopleByID map[string]*drawPersonOutput
@@ -37,8 +50,8 @@ func Draw(ctx context.Context, p DrawParams) error {
 	// Use this function to prepare ID values for Mermaid diagrams. In
 	// particular, for declaring nodes by ID and to link nodes between nodes.
 	// Mermaid does not like the @ character in node IDs. However, any
-	// GEDCOM-formatted ID will always start and end with @. Should only need to
-	// use this so that Mermaid can draw the graph.
+	// GEDCOM-formatted ID will always start and end with @. So it's OK to have
+	// the @ symbol in the node label, just can't put it in the node ID.
 	stripAtSign := func(in string) string { return strings.ReplaceAll(in, "@", "") }
 
 	for _, union := range p.Unions {
@@ -55,61 +68,88 @@ func Draw(ctx context.Context, p DrawParams) error {
 		for i, child := range union.Children {
 			childIDs[i] = stripAtSign(child.ID)
 		}
+		var dateSpan string
+		if union.StartDate != nil || union.EndDate != nil {
+			dateSpan = formatYear(union.StartDate) + " - " + formatYear(union.EndDate)
+		}
 		unionsByID[union.ID] = &drawUnionOutput{
 			ID:        union.ID,
 			Person1ID: p1,
 			Person2ID: p2,
-			StartDate: formatYear(union.StartDate),
-			EndDate:   formatYear(union.EndDate),
+			DateSpan:  dateSpan,
 			ChildIDs:  childIDs,
 		}
 	}
 
 	for i, person := range p.People {
-		// Retain the original ID for display b/c that's the ID used in the Relate people functionality.
-		originalID := person.ID
+		var originalID string
+		if p.DisplayID {
+			// Retain the original ID for display b/c that's the ID used in the Relate people functionality.
+			originalID = person.ID
+		}
 
 		person.ID = stripAtSign(person.ID)
 		allPeopleIDs[i] = person.ID
 
-		peopleByID[person.ID] = &drawPersonOutput{
-			ID:         person.ID,
-			OriginalID: originalID,
-			Fullname:   strings.ReplaceAll(person.Name.Full(), `"`, `#quot;`),
-			BirthYear:  formatYear(person.Birthdate),
-			DeathYear:  formatYear(person.Deathdate),
+		var abbreviatedName string
+		if person.Name.Forename != "" && person.Name.Surname != "" {
+			abbreviatedName = person.Name.Forename[:1] + ". " + person.Name.Surname
 		}
+
+		var dateSpan string
+		if person.Birthdate != nil || person.Deathdate != nil {
+			dateSpan = formatYear(person.Birthdate) + " - " + formatYear(person.Deathdate)
+		}
+
+		displayPersonData := drawPersonOutput{
+			ID:              person.ID,
+			OriginalID:      originalID,
+			Fullname:        strings.ReplaceAll(person.Name.Full(), `"`, `#quot;`),
+			AbbreviatedName: abbreviatedName,
+			DateSpan:        dateSpan,
+		}
+		peopleByID[person.ID] = &displayPersonData
 	}
 
-	return tmpl.Execute(p.Out, ExecData{PeopleIDs: allPeopleIDs, PeopleByID: peopleByID, UnionsByID: unionsByID})
+	return tmpl.Execute(p.Out, ExecData{
+		FlowChartDirection: p.Direction,
+		PeopleIDs:          allPeopleIDs,
+		PeopleByID:         peopleByID,
+		UnionsByID:         unionsByID,
+	})
 }
 
 type drawPersonOutput struct {
-	ID         string
-	OriginalID string
-	Fullname   string
-	BirthYear  string
-	DeathYear  string
+	ID              string
+	OriginalID      string
+	Fullname        string
+	AbbreviatedName string
+	DateSpan        string
 }
 
 type drawUnionOutput struct {
 	ID        string
 	Person1ID string
 	Person2ID string
-	StartDate string
-	EndDate   string
+	DateSpan  string
 	ChildIDs  []string
 }
 
-const mermaidFlowchartFamilyTree = `flowchart TD
+const mermaidFlowchartFamilyTree = `%%{init:
+	{"flowchart": {"defaultRenderer": "elk"}}
+}%%
+
+flowchart {{$.FlowChartDirection}}
+
+classDef unionNode height:5rem,width:10rem,display:inline-block;
+
 %% define people
 
-{{range $_, $id := $.PeopleIDs}}
+{{- range $_, $id := $.PeopleIDs}}
 	{{$person := index $.PeopleByID $id}}
-	{{- $id}}("
-({{$person.OriginalID}})
-{{$person.Fullname}}
-{{with $person.BirthYear}}b. {{.}}{{end}} {{with $person.DeathYear}}d. {{.}}{{end}}
+	{{$id}}("{{$person.Fullname}}
+{{$person.DateSpan}}
+{{with $person.OriginalID}}({{.}}){{end -}}
 ")
 {{- end}}
 
@@ -120,9 +160,15 @@ const mermaidFlowchartFamilyTree = `flowchart TD
 	{{- $person2 := index $.PeopleByID $union.Person2ID}}
 
 	%% "{{with $person1}}{{.Fullname}}{{end}}" and "{{with $person2}}{{.Fullname}}{{end}}"
-	{{$union.ID }}[["{{with $union.StartDate}}{{.}}{{end}} - {{with $union.EndDate}}{{.}}{{end}}"]]
-	{{$union.Person1ID }}-...->{{$union.ID}}
-	{{$union.Person2ID }}-...->{{$union.ID}}
+	{{$union.ID}}>"
+{{with $person1}}{{.AbbreviatedName}}{{else}}unknown{{end}}
++
+{{with $person2}}{{.AbbreviatedName}}{{else}}unknown{{end}}
+{{with $union.DateSpan}}{{.}}{{else}} {{- end}}{{/* as a fallback, leave empty space so that Mermaid can render */}}
+"]:::unionNode
+
+	{{with $union.Person1ID}}{{.}}-...->{{$union.ID}}{{end}}
+	{{with $union.Person2ID}}{{.}}-...->{{$union.ID}}{{end}}
 	{{range $_, $childID := $union.ChildIDs}}
 	{{$union.ID}} =====> {{$childID}}
 	{{- end}}

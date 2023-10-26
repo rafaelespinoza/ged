@@ -12,14 +12,17 @@ import (
 )
 
 func makeDraw(name string) alf.Directive {
-	var inputFormat string
+	var inputFormat, flowchartDirection string
+	var displayID bool
 	supportedInputFormats := []string{"gedcom", "json"}
 	out := alf.Command{
 		Description: "generate a family tree",
 		Setup: func(p flag.FlagSet) *flag.FlagSet {
 			fullName := mainName + " " + name
 			flags := newFlagSet(fullName)
+			flags.StringVar(&flowchartDirection, "direction", srv.ValidFlowchartDirections[0], fmt.Sprintf("orientation of flowchart, one of %q", srv.ValidFlowchartDirections))
 			flags.StringVar(&inputFormat, "f", supportedInputFormats[0], fmt.Sprintf("input format, one of %q", supportedInputFormats))
+			flags.BoolVar(&displayID, "display-id", false, "if true, then display ID of each person")
 
 			flags.Usage = func() {
 				fmt.Fprintf(flags.Output(), `%s < path/to/input
@@ -35,6 +38,9 @@ Description:
 		  "unions": []entity.Union{}
 		}
 	See the parse subcommand to format that JSON.
+
+	If display-id is true, then each person node will have the ID of the person displayed.
+	This ID can be helpful for additional introspection.
 
 Examples:
 	# Using gedcom-formatted input
@@ -73,9 +79,11 @@ Examples:
 			}
 
 			return srv.Draw(ctx, srv.DrawParams{
-				Out:    os.Stdout,
-				People: people,
-				Unions: unions,
+				Direction: flowchartDirection,
+				DisplayID: displayID,
+				Out:       os.Stdout,
+				People:    people,
+				Unions:    unions,
 			})
 		},
 	}
