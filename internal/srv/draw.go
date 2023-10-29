@@ -12,7 +12,7 @@ import (
 	"github.com/rafaelespinoza/ged/internal/entity"
 )
 
-type DrawParams struct {
+type MermaidFlowchartParams struct {
 	Out       io.Writer
 	Direction string
 	DisplayID bool
@@ -24,7 +24,7 @@ type DrawParams struct {
 // flowchart. More info is at https://mermaid.js.org/syntax/flowchart.html#direction.
 var ValidFlowchartDirections = []string{"TB", "TD", "BT", "RL", "LR"}
 
-func Draw(ctx context.Context, p DrawParams) error {
+func MakeMermaidFlowchart(ctx context.Context, p MermaidFlowchartParams) error {
 	if !slices.Contains(ValidFlowchartDirections, p.Direction) {
 		return fmt.Errorf("invalid Direction %q, valid ones are: %q", p.Direction, ValidFlowchartDirections)
 	}

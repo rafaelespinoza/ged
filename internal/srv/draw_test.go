@@ -10,35 +10,35 @@ import (
 	"github.com/rafaelespinoza/ged/internal/entity"
 )
 
-func TestDraw(t *testing.T) {
+func TestMakeMermaidFlowchart(t *testing.T) {
 	validDefaultDirection := ValidFlowchartDirections[0]
 
 	t.Run("outputs something", func(t *testing.T) {
 		tests := []struct {
 			Name   string
-			Params DrawParams
+			Params MermaidFlowchartParams
 		}{
 			{
 				Name:   "no people, no unions",
-				Params: DrawParams{Direction: validDefaultDirection},
+				Params: MermaidFlowchartParams{Direction: validDefaultDirection},
 			},
 			{
 				Name: "some people, no unions",
-				Params: DrawParams{
+				Params: MermaidFlowchartParams{
 					Direction: validDefaultDirection,
 					People:    []*entity.Person{{}, {}},
 				},
 			},
 			{
 				Name: "no people, some unions",
-				Params: DrawParams{
+				Params: MermaidFlowchartParams{
 					Direction: validDefaultDirection,
 					Unions:    []*entity.Union{{}, {}},
 				},
 			},
 			{
 				Name: "some people, some unions",
-				Params: DrawParams{
+				Params: MermaidFlowchartParams{
 					Direction: validDefaultDirection,
 					People:    []*entity.Person{{}, {}},
 					Unions:    []*entity.Union{{}, {}},
@@ -51,7 +51,7 @@ func TestDraw(t *testing.T) {
 				sink := new(bytes.Buffer)
 				test.Params.Out = sink
 
-				err := Draw(context.Background(), test.Params)
+				err := MakeMermaidFlowchart(context.Background(), test.Params)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -75,7 +75,7 @@ func TestDraw(t *testing.T) {
 				{ID: "@IFoo@", Name: entity.PersonalName{Forename: "Foxtrot", Surname: "Foo"}},
 				{ID: "@IBar@", Name: entity.PersonalName{Forename: "Bravo", Surname: "Bar"}},
 			}
-			err := Draw(context.Background(), DrawParams{
+			err := MakeMermaidFlowchart(context.Background(), MermaidFlowchartParams{
 				Direction: validDefaultDirection,
 				Out:       sink,
 				DisplayID: displayID,
@@ -109,7 +109,7 @@ func TestDraw(t *testing.T) {
 			t.Run(direction, func(t *testing.T) {
 				sink := new(bytes.Buffer)
 
-				err := Draw(context.Background(), DrawParams{Direction: direction, Out: sink})
+				err := MakeMermaidFlowchart(context.Background(), MermaidFlowchartParams{Direction: direction, Out: sink})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -133,7 +133,7 @@ func TestDraw(t *testing.T) {
 		t.Run("error", func(t *testing.T) {
 			sink := new(bytes.Buffer)
 
-			err := Draw(context.Background(), DrawParams{Direction: "invalid", Out: sink})
+			err := MakeMermaidFlowchart(context.Background(), MermaidFlowchartParams{Direction: "invalid", Out: sink})
 			if err == nil {
 				t.Error("expected an error but got nil")
 			} else if !strings.Contains(err.Error(), "invalid Direction") {

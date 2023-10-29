@@ -78,7 +78,7 @@ Examples:
 				}
 			}
 
-			return srv.Draw(ctx, srv.DrawParams{
+			return srv.MakeMermaidFlowchart(ctx, srv.MermaidFlowchartParams{
 				Direction: flowchartDirection,
 				DisplayID: displayID,
 				Out:       os.Stdout,
