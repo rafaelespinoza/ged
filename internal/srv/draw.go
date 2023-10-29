@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/log"
+
+	mermaid_go "github.com/dreampuf/mermaid.go"
 )
 
 type MermaidFlowchartParams struct {
@@ -135,11 +138,7 @@ type drawUnionOutput struct {
 	ChildIDs  []string
 }
 
-const mermaidFlowchartFamilyTree = `%%{init:
-	{"flowchart": {"defaultRenderer": "elk"}}
-}%%
-
-flowchart {{$.FlowChartDirection}}
+const mermaidFlowchartFamilyTree = `flowchart {{$.FlowChartDirection}}
 
 classDef unionNode height:5rem,width:10rem,display:inline-block;
 
@@ -180,4 +179,67 @@ func formatYear(in *time.Time) string {
 		return ""
 	}
 	return in.Format("2006")
+}
+
+type MermaidRenderer interface {
+	DrawSVG(ctx context.Context, w io.Writer) error
+	DrawPNG(ctx context.Context, w io.Writer, scale float64) error
+	Close() error
+}
+
+func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
+	const flowchartStatements = `mermaid.initialize({
+		maxTextSize: 200000,	// default is 50000
+		flowchart: { defaultRenderer: "elk" },
+	});`
+	re, err := mermaid_go.NewRenderEngine(ctx, flowchartStatements)
+	if err != nil {
+		return nil, err
+	}
+	contents, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return &mermaidRenderer{re, string(contents)}, nil
+}
+
+type mermaidRenderer struct {
+	re       *mermaid_go.RenderEngine
+	contents string
+}
+
+func (m *mermaidRenderer) DrawSVG(ctx context.Context, w io.Writer) error {
+	out, err := m.re.Render(m.contents)
+	if err != nil {
+		return err
+	}
+
+	// Need to fix the invalid <br> tags.
+	// See issue number 74 on the mermaid-cli github repo at https://github.com/mermaid-js/mermaid-cli
+	out = strings.ReplaceAll(out, `<br>`, `<br/>`)
+
+	n, err := w.Write([]byte(out))
+	if err != nil {
+		return err
+	}
+	log.Debug(ctx, map[string]any{"num_bytes_written": n, "method": "DrawSVG"}, "wrote mermaid data")
+	return nil
+}
+
+func (m *mermaidRenderer) DrawPNG(ctx context.Context, w io.Writer, scale float64) error {
+	out, box, err := m.re.RenderAsScaledPng(m.contents, scale)
+	if err != nil {
+		return err
+	}
+	n, err := w.Write(out)
+	if err != nil {
+		return err
+	}
+	log.Debug(ctx, map[string]any{"num_bytes_written": n, "scale": scale, "method": "DrawPNG", "box": box}, "wrote mermaid data")
+	return nil
+}
+
+func (m *mermaidRenderer) Close() error {
+	m.re.Cancel()
+	return nil
 }

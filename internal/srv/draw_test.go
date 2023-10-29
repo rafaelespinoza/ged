@@ -3,7 +3,11 @@ package srv
 import (
 	"bytes"
 	"context"
+	"image/png"
 	"io"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -149,4 +153,148 @@ func TestMakeMermaidFlowchart(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestMermaidRenderer(t *testing.T) {
+	const input = `flowchart LR
+
+%% define people
+
+	BART_SIMPSON("Bart Simpson")
+	HOMER_SIMPSON("Homer Simpson")
+	LISA_SIMPSON("Lisa Simpson")
+	MAGGIE_SIMPSON("Maggie Simpson")
+	MARGE_SIMPSON("Marge Simpson")
+
+%% define unions
+
+	%% "Homer Simpson" and "Marge Simpson"
+	F0000>"
+H. Simpson
++
+M. Simpson
+"]
+
+	HOMER_SIMPSON-...->F0000
+	MARGE_SIMPSON-...->F0000
+
+	F0000 =====> BART_SIMPSON
+	F0000 =====> MAGGIE_SIMPSON
+	F0000 =====> LISA_SIMPSON`
+
+	t.Run("SVG", func(t *testing.T) {
+		testSVG(t, context.Background(), strings.NewReader(input))
+	})
+
+	t.Run("PNG", func(t *testing.T) {
+		testPNG(t, context.Background(), strings.NewReader(input), 5.0)
+	})
+}
+
+func TestDraw(t *testing.T) {
+	gedcomToMermaid := func(t *testing.T, ctx context.Context, pathToFile string) io.Reader {
+		file, err := os.Open(filepath.Clean(pathToFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = file.Close() }()
+
+		people, unions, err := ParseGedcom(ctx, file)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		buf := new(bytes.Buffer)
+		params := MermaidFlowchartParams{
+			Out:       buf,
+			Direction: "LR",
+			DisplayID: true,
+			People:    people,
+			Unions:    unions,
+		}
+		if err = MakeMermaidFlowchart(ctx, params); err != nil {
+			t.Fatal(err)
+		}
+
+		return buf
+	}
+
+	t.Run("SVG", func(t *testing.T) {
+		for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged", "simpsons.ged"} {
+			ctx := context.Background()
+			pathToFile := filepath.Join("..", "..", "testdata", testFilename)
+			buf := gedcomToMermaid(t, ctx, pathToFile)
+
+			t.Run(testFilename, func(t *testing.T) { testSVG(t, ctx, buf) })
+		}
+	})
+
+	t.Run("PNG", func(t *testing.T) {
+		for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged", "simpsons.ged"} {
+			ctx := context.Background()
+			pathToFile := filepath.Join("..", "..", "testdata", testFilename)
+			buf := gedcomToMermaid(t, ctx, pathToFile)
+
+			t.Run(testFilename, func(t *testing.T) {
+				for _, scale := range []float64{1, 5, 10} {
+					name := strconv.FormatFloat(scale, 'f', 1, 64)
+
+					t.Run(name, func(t *testing.T) {
+						testPNG(t, ctx, buf, scale)
+					})
+				}
+			})
+		}
+	})
+}
+
+func testSVG(t *testing.T, ctx context.Context, r io.Reader) {
+	t.Helper()
+
+	m, err := NewMermaidRenderer(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Log(cerr)
+		}
+	}()
+
+	buf := new(bytes.Buffer)
+	if err = m.DrawSVG(ctx, buf); err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	const expPrefix = "<svg"
+	if !strings.HasPrefix(got, expPrefix) {
+		t.Fatalf("expected SVG output to begin with %q", expPrefix)
+	}
+	const expSuffix = "</svg>"
+	if !strings.HasSuffix(got, expSuffix) {
+		t.Fatalf("expected SVG output to end with %q", expSuffix)
+	}
+}
+
+func testPNG(t *testing.T, ctx context.Context, r io.Reader, scale float64) {
+	t.Helper()
+
+	m, err := NewMermaidRenderer(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if cerr := m.Close(); cerr != nil {
+			t.Log(cerr)
+		}
+	}()
+
+	buf := new(bytes.Buffer)
+	if err = m.DrawPNG(ctx, buf, scale); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = png.Decode(buf); err != nil {
+		t.Fatal(err)
+	}
 }

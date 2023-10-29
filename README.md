@@ -8,7 +8,7 @@ genealogical data tooling
 
 - Ingest [GEDCOM](https://gedcom.io) data, a defacto standard file format spec for genealogical data
 - Calculate relationships between family members via common ancestors
-- Draw a family tree as a [Mermaid flowchart](https://mermaid.js.org/syntax/flowchart.html)
+- Draw a family tree from GEDCOM data
 - Structured, leveled logging messages written to standard error
 
 ## Getting started
@@ -71,11 +71,26 @@ $ mkdir /tmp/ged && chmod -v 700 /tmp/ged
 
 ### draw
 
-Generate a family tree as a Mermaid flowchart.
+Take GEDCOM data as input and output a family tree as an SVG or PNG.
 ```sh
-$ bin/main draw < testdata/simpsons.ged | tee /tmp/ged/simpsons.mermaid
+# By default, it renders a SVG
+$ bin/main draw < testdata/simpsons.ged > /tmp/ged/simpsons.svg
+
+# Render a PNG
+$ bin/main draw -output-format=png < testdata/simpsons.ged > /tmp/ged/simpsons.png
 ```
-The resulting file can be input to a Mermaid interpreter, such as https://mermaid.live.
+Under the hood, a [Mermaid flowchart](https://mermaid.js.org/syntax/flowchart.html) is constructed from the GEDCOM data. Then that flowchart is rendered into a standard image format.
+
+Another output format is the Mermaid flowchart itself. The use case here is for
+any manual edits you may want to do before rendering it again.
+```sh
+$ bin/main draw -output-format=mermaid < testdata/simpsons.ged > /tmp/ged/simpsons.mermaid
+
+# ... manual adjustments to Mermaid flowchart file ...
+
+# to render the manually-modified Mermaid flowchart, just specify the input-format
+$ bin/main draw -input-format=mermaid < /tmp/ged/simpsons.mermaid > /tmp/ged/simpsons.svg
+```
 
 ### relate
 
