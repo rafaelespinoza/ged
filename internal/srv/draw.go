@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
+	"github.com/rafaelespinoza/ged/internal/entity/date"
 	"github.com/rafaelespinoza/ged/internal/log"
 
 	mermaid_go "github.com/dreampuf/mermaid.go"
@@ -73,7 +74,7 @@ func MakeMermaidFlowchart(ctx context.Context, p MermaidFlowchartParams) error {
 		}
 		var dateSpan string
 		if union.StartDate != nil || union.EndDate != nil {
-			dateSpan = formatYear(union.StartDate) + " - " + formatYear(union.EndDate)
+			dateSpan = formatDateTuple(union.StartDate) + " - " + formatDateTuple(union.EndDate)
 		}
 		unionsByID[union.ID] = &drawUnionOutput{
 			ID:        union.ID,
@@ -101,7 +102,7 @@ func MakeMermaidFlowchart(ctx context.Context, p MermaidFlowchartParams) error {
 
 		var dateSpan string
 		if person.Birthdate != nil || person.Deathdate != nil {
-			dateSpan = formatYear(person.Birthdate) + " - " + formatYear(person.Deathdate)
+			dateSpan = formatDateTuple(person.Birthdate) + " - " + formatDateTuple(person.Deathdate)
 		}
 
 		displayPersonData := drawPersonOutput{
@@ -174,11 +175,36 @@ classDef unionNode height:5rem,width:10rem,display:inline-block;
 {{- end}}
 `
 
-func formatYear(in *time.Time) string {
-	if in == nil {
+func formatDateTuple(d *entity.Date) string {
+	if d == nil {
 		return ""
 	}
-	return in.Format("2006")
+
+	if d.Date != nil {
+		return formatDateYear(d.Date)
+	} else if d.Range != nil {
+		return formatRange(d.Range)
+	}
+	return ""
+}
+
+func formatDateYear(d *date.Date) string {
+	y := strconv.Itoa(d.Year)
+	if d.Approximate {
+		return "~ " + y
+	}
+	return y
+}
+
+func formatRange(r *date.Range) (out string) {
+	if r.Lo != nil && r.Hi != nil {
+		out = formatDateYear(r.Lo) + " ... " + formatDateYear(r.Hi)
+	} else if r.Lo != nil {
+		out = formatDateYear(r.Lo) + " ..."
+	} else if r.Hi != nil {
+		out = "... " + formatDateYear(r.Hi)
+	}
+	return
 }
 
 type MermaidRenderer interface {

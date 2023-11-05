@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/gedcom"
@@ -58,18 +57,27 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 	for _, individual := range records {
 		var (
 			inputName gedcom.PersonalName
-			birthdate *time.Time
-			deathdate *time.Time
+			birthdate *entity.Date
+			deathdate *entity.Date
+			err       error
 		)
 
 		if len(individual.Names) > 0 {
 			inputName = individual.Names[0]
 		}
-		if individual.Birth != nil && individual.Birth.Date != nil {
-			birthdate = individual.Birth.Date
+		if individual.Birth != nil {
+			birthdate, err = entity.NewDate(individual.Birth.Date, individual.Birth.DateRange)
+			if err != nil {
+				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Birth.Date")
+				return nil, err
+			}
 		}
-		if individual.Death != nil && individual.Death.Date != nil {
-			deathdate = individual.Death.Date
+		if individual.Death != nil {
+			deathdate, err = entity.NewDate(individual.Death.Date, individual.Death.DateRange)
+			if err != nil {
+				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Death.Date")
+				return nil, err
+			}
 		}
 
 		out[individual.Xref] = &entity.Person{
@@ -143,19 +151,29 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 func convertGedcomFamilies(ctx context.Context, records []*gedcom.FamilyRecord, peopleByGCID map[string]*entity.Person) (map[string]*entity.Union, error) {
 	out := make(map[string]*entity.Union, len(records))
 
+	var err error
+
 	for i, family := range records {
 		union := entity.Union{ID: family.Xref}
-		if family.MarriedAt != nil && family.MarriedAt.Date != nil {
-			union.StartDate = family.MarriedAt.Date
+		if family.MarriedAt != nil {
+			union.StartDate, err = entity.NewDate(family.MarriedAt.Date, family.MarriedAt.DateRange)
+			if err != nil {
+				log.Error(ctx, map[string]any{"family": family}, err, "invalid StartDate")
+				return nil, err
+			}
 		}
 		if family.DivorcedAt != nil && family.DivorcedAt.Date != nil {
-			union.EndDate = family.DivorcedAt.Date
+			union.EndDate, err = entity.NewDate(family.DivorcedAt.Date, family.DivorcedAt.DateRange)
+			if err != nil {
+				log.Error(ctx, map[string]any{"family": family}, err, "invalid EndDate")
+				return nil, err
+			}
 		}
 		if family.AnnulledAt != nil && family.AnnulledAt.Date != nil {
-			if union.EndDate == nil {
-				union.EndDate = family.AnnulledAt.Date
-			} else if family.AnnulledAt.Date.Before(*union.EndDate) {
-				union.EndDate = family.AnnulledAt.Date
+			union.EndDate, err = entity.NewDate(family.AnnulledAt.Date, family.AnnulledAt.DateRange)
+			if err != nil {
+				log.Error(ctx, map[string]any{"family": family}, err, "invalid EndDate")
+				return nil, err
 			}
 		}
 

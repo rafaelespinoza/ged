@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rafaelespinoza/ged/internal/entity/date"
 	"github.com/rafaelespinoza/ged/internal/gedcom"
 )
 
@@ -323,14 +324,15 @@ func TestReadRecordsFields(t *testing.T) {
 	})
 }
 
-func mustParseDate(t *testing.T, d string) *time.Time {
+func mustParseDate(t *testing.T, d string) *date.Date {
 	t.Helper()
 
-	out, err := time.Parse(time.DateOnly, d)
+	dat, err := time.Parse(time.DateOnly, d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &out
+	year, month, day := dat.Date()
+	return &date.Date{Year: year, Month: month, Day: day}
 }
 
 func cmpStringSlices(t *testing.T, errMsgPrefix string, actual, expected []string) {

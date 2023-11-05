@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/rafaelespinoza/alf"
 
@@ -245,13 +244,13 @@ func (c *fzfChooser) choosePersonID(ctx context.Context) (out string, err error)
 	return
 }
 
-func formatDate(in *time.Time) *string {
+func formatDate(in *entity.Date) *string {
 	if in == nil {
 		return nil
 	}
 
-	val := in.Format(time.DateOnly)
-	return &val
+	out := in.String()
+	return &out
 }
 
 func formatMutualRelationship(in entity.MutualRelationship) (out map[string]any) {

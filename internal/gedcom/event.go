@@ -3,10 +3,11 @@ package gedcom
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
+
+	"github.com/rafaelespinoza/ged/internal/entity/date"
 	"github.com/rafaelespinoza/ged/internal/log"
 )
 
@@ -17,7 +18,8 @@ import (
 // marriage in a family). See the GEDCOM7 spec for info on Individual Events and
 // Family Events.
 type Event struct {
-	Date            *time.Time
+	Date            *date.Date
+	DateRange       *date.Range
 	Place           string
 	SourceCitations []*SourceCitation
 }
@@ -48,7 +50,7 @@ func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node
 				return
 			}
 
-			out.Date, err = newDate(subline.Payload)
+			out.Date, out.DateRange, err = date.Parse(subline.Payload)
 			if err != nil {
 				return
 			}
