@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sort"
 	"sync"
 )
 
@@ -55,8 +56,11 @@ func log(ctx context.Context, v slog.Level, fields map[string]any, err error, ms
 		h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})
 		Init(h)
 	}
+	if !theLogger.Enabled(ctx, v) {
+		return
+	}
 
-	attrs := make([]any, 0, len(fields))
+	attrs := make([]slog.Attr, 0, len(fields))
 	for key, val := range fields {
 		attrs = append(attrs, slog.Attr{Key: key, Value: slog.AnyValue(val)})
 	}
@@ -64,5 +68,11 @@ func log(ctx context.Context, v slog.Level, fields map[string]any, err error, ms
 		attrs = append(attrs, slog.Attr{Key: "error", Value: slog.AnyValue(err)})
 	}
 
-	theLogger.LogAttrs(ctx, v, msg, slog.Group("data", attrs...))
+	sort.Slice(attrs, func(i, j int) bool { return attrs[i].Key < attrs[j].Key })
+	args := make([]any, len(attrs))
+	for i, attr := range attrs {
+		args[i] = attr
+	}
+
+	theLogger.LogAttrs(ctx, v, msg, slog.Group("data", args...))
 }
