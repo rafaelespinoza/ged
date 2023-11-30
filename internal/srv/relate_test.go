@@ -2,15 +2,57 @@ package srv_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/srv"
 )
+
+// These IDs correspond to the GEDCOM testdata file. Each stanza denotes
+// a generation.
+const (
+	jfkGrandfather = "@I44@"
+	jfkGrandmother = "@I45@"
+
+	jfkFather = "@I1@"
+	jfkMother = "@I2@"
+	jfkAunt   = "@I56@"
+
+	jfk       = "@I0@"  // John F Kennedy
+	rfk       = "@I21@" // Robert F Kennedy
+	jfkWife   = "@I52@"
+	jfkSister = "@I8@" // Eunice Mary Kennedy (b 1915, d 2011)
+
+	jfkJr  = "@I54@" // JFK's son
+	rfkJr  = "@I25@" // RFK's son
+	jpk2   = "@I24@" // Joseph Patrick Kennedy II (b 1952)
+	mariaS = "@I11@" // Maria Owings Shriver (b 1955)
+	arnold = "@I10@" // The Terminator
+
+	jpk3           = "@I70@" // Joseph Patrick Kennedy III (b 1980)
+	arnoldDaughter = "@I72@" // Katherine Schwarzenegger (b 1989)
+)
+
+func buildKennedyFamily(t *testing.T) []*entity.Person {
+	var kennedys []*entity.Person
+
+	pathToFile := filepath.Join("..", "..", "testdata", "kennedy.ged")
+	file, err := os.Open(filepath.Clean(pathToFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	kennedys, _, err = srv.ParseGedcom(context.Background(), file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return kennedys
+}
 
 func TestRelatorRelate(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
@@ -33,12 +75,6 @@ func TestRelatorRelate(t *testing.T) {
 				ExpErrMsg: "15 not found",
 			},
 			{
-				Name:     "same people",
-				InPeople: []*entity.Person{{ID: "10"}, {ID: "20"}},
-				InP1:     "10", InP2: "10",
-				ExpErrMsg: "same people ids",
-			},
-			{
 				Name:     "unrelated",
 				InPeople: []*entity.Person{{ID: "10"}, {ID: "20"}},
 				InP1:     "10", InP2: "20",
@@ -48,7 +84,7 @@ func TestRelatorRelate(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.Name, func(t *testing.T) {
-				_, _, err := srv.NewRelator(test.InPeople).Relate(context.Background(), test.InP1, test.InP2)
+				_, err := srv.NewRelator(test.InPeople).Relate(context.Background(), test.InP1, test.InP2)
 				if err == nil {
 					t.Fatal("expected non-empty error")
 				}
@@ -64,69 +100,83 @@ func TestRelatorRelate(t *testing.T) {
 			Name       string
 			InPeople   []*entity.Person
 			InP1, InP2 string
-			Exp1, Exp2 entity.Lineage
-			ExpErrMsg  string
+			Exp        entity.MutualRelationship
 		}
 
 		runTest := func(t *testing.T, test Testcase) {
-			r1, r2, err := srv.NewRelator(test.InPeople).Relate(context.Background(), test.InP1, test.InP2)
+			actual, err := srv.NewRelator(test.InPeople).Relate(context.Background(), test.InP1, test.InP2)
 			if err != nil {
 				t.Fatalf("expected empty error, got %v", err)
 			}
 
-			testRelationship(t, r1, test.Exp1)
-			testRelationship(t, r2, test.Exp2)
+			testPerson(t, ".CommonPerson", actual.CommonPerson, test.Exp.CommonPerson)
+			testUnion(t, ".Union", actual.Union, test.Exp.Union)
+
+			testRelationship(t, ".R1", actual.R1, test.Exp.R1)
+			testRelationship(t, ".R2", actual.R2, test.Exp.R2)
 		}
 
-		var kennedys []*entity.Person
-		{
-			pathToFile := filepath.Join("..", "..", "testdata", "kennedy.ged")
-			file, err := os.Open(filepath.Clean(pathToFile))
-			if err != nil {
-				t.Fatal(err)
+		kennedys := buildKennedyFamily(t)
+
+		t.Run(entity.Self.String(), func(t *testing.T) {
+			tests := []Testcase{
+				{
+					Name:     "self",
+					InPeople: kennedys,
+					InP1:     jfk,
+					InP2:     jfk,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfk},
+						R1: entity.Relationship{
+							Description:        "self",
+							Type:               entity.Self,
+							SourceID:           jfk,
+							TargetID:           jfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "self",
+							Type:               entity.Self,
+							SourceID:           jfk,
+							TargetID:           jfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfk}},
+						},
+					},
+				},
 			}
-			defer func() { _ = file.Close() }()
-			kennedys, _, err = srv.ParseGedcom(context.Background(), file)
-			if err != nil {
-				t.Fatal(err)
+
+			for _, test := range tests {
+				t.Run(test.Name, func(t *testing.T) { runTest(t, test) })
 			}
-		}
+		})
 
-		// These IDs correspond to the GEDCOM testdata file. Each stanza denotes
-		// a generation.
-		const (
-			jfkGrandfather = "@I44@"
-
-			jfkFather = "@I1@"
-			jfkAunt   = "@I56@"
-
-			jfk = "@I0@"  // John F Kennedy
-			rfk = "@I21@" // Robert F Kennedy
-
-			jfkJr  = "@I54@" // JFK's son
-			rfkJr  = "@I25@" // RFK's son
-			arnold = "@I10@" // The Terminator
-
-			jpk3           = "@I70@" // Joseph Patrick Kennedy III (b 1980)
-			arnoldDaughter = "@I72@" // Katherine Schwarzenegger (b 1989)
-		)
-
-		t.Run(entity.Self.String()+" or "+entity.Sibling.String(), func(t *testing.T) {
+		t.Run(entity.Sibling.String(), func(t *testing.T) {
 			tests := []Testcase{
 				{
 					Name:     "siblings",
 					InPeople: kennedys,
 					InP1:     jfk,
 					InP2:     rfk,
-					Exp1: entity.Lineage{
-						Description:        "sibling",
-						Type:               entity.Sibling,
-						GenerationsRemoved: 0,
-					},
-					Exp2: entity.Lineage{
-						Description:        "sibling",
-						Type:               entity.Sibling,
-						GenerationsRemoved: 0,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "sibling",
+							Type:               entity.Sibling,
+							SourceID:           jfk,
+							TargetID:           rfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "sibling",
+							Type:               entity.Sibling,
+							SourceID:           rfk,
+							TargetID:           jfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: rfk}, {ID: jfkMother}},
+						},
 					},
 				},
 			}
@@ -143,15 +193,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfk,
 					InP2:     jfkFather,
-					Exp1: entity.Lineage{
-						Description:        "child",
-						Type:               entity.Child,
-						GenerationsRemoved: 1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "parent",
-						Type:               entity.Parent,
-						GenerationsRemoved: -1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkFather},
+						R1: entity.Relationship{
+							Description:        "child",
+							Type:               entity.Child,
+							SourceID:           jfk,
+							TargetID:           jfkFather,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkFather}},
+						},
+						R2: entity.Relationship{
+							Description:        "parent",
+							Type:               entity.Parent,
+							SourceID:           jfkFather,
+							TargetID:           jfk,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkFather}},
+						},
 					},
 				},
 				{
@@ -159,15 +218,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfk,
 					InP2:     jfkGrandfather,
-					Exp1: entity.Lineage{
-						Description:        "grand child",
-						Type:               entity.Child,
-						GenerationsRemoved: 2,
-					},
-					Exp2: entity.Lineage{
-						Description:        "grand parent",
-						Type:               entity.Parent,
-						GenerationsRemoved: -2,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkGrandfather},
+						R1: entity.Relationship{
+							Description:        "grand child",
+							Type:               entity.Child,
+							SourceID:           jfk,
+							TargetID:           jfkGrandfather,
+							GenerationsRemoved: 2,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkFather}, {ID: jfkGrandfather}},
+						},
+						R2: entity.Relationship{
+							Description:        "grand parent",
+							Type:               entity.Parent,
+							SourceID:           jfkGrandfather,
+							TargetID:           jfk,
+							GenerationsRemoved: -2,
+							Path:               []entity.Person{{ID: jfkGrandfather}},
+						},
 					},
 				},
 			}
@@ -184,15 +252,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkFather,
 					InP2:     jfk,
-					Exp1: entity.Lineage{
-						Description:        "parent",
-						Type:               entity.Parent,
-						GenerationsRemoved: -1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "child",
-						Type:               entity.Child,
-						GenerationsRemoved: 1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkFather},
+						R1: entity.Relationship{
+							Description:        "parent",
+							Type:               entity.Parent,
+							SourceID:           jfkFather,
+							TargetID:           jfk,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkFather}},
+						},
+						R2: entity.Relationship{
+							Description:        "child",
+							Type:               entity.Child,
+							SourceID:           jfk,
+							TargetID:           jfkFather,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkFather}},
+						},
 					},
 				},
 				{
@@ -200,15 +277,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkGrandfather,
 					InP2:     jfk,
-					Exp1: entity.Lineage{
-						Description:        "grand parent",
-						Type:               entity.Parent,
-						GenerationsRemoved: -2,
-					},
-					Exp2: entity.Lineage{
-						Description:        "grand child",
-						Type:               entity.Child,
-						GenerationsRemoved: 2,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkGrandfather},
+						R1: entity.Relationship{
+							Description:        "grand parent",
+							Type:               entity.Parent,
+							SourceID:           jfkGrandfather,
+							TargetID:           jfk,
+							GenerationsRemoved: -2,
+							Path:               []entity.Person{{ID: jfkGrandfather}},
+						},
+						R2: entity.Relationship{
+							Description:        "grand child",
+							Type:               entity.Child,
+							SourceID:           jfk,
+							TargetID:           jfkGrandfather,
+							GenerationsRemoved: 2,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkFather}, {ID: jfkGrandfather}},
+						},
 					},
 				},
 			}
@@ -225,15 +311,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkJr,
 					InP2:     rfk,
-					Exp1: entity.Lineage{
-						Description:        "niece/nephew",
-						Type:               entity.NieceNephew,
-						GenerationsRemoved: 1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "aunt/uncle",
-						Type:               entity.AuntUncle,
-						GenerationsRemoved: -1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "niece/nephew",
+							Type:               entity.NieceNephew,
+							SourceID:           jfkJr,
+							TargetID:           rfk,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "aunt/uncle",
+							Type:               entity.AuntUncle,
+							SourceID:           rfk,
+							TargetID:           jfkJr,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: rfk}, {ID: jfkMother}},
+						},
 					},
 				},
 				{
@@ -241,15 +336,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkJr,
 					InP2:     jfkAunt,
-					Exp1: entity.Lineage{
-						Description:        "grand niece/nephew",
-						Type:               entity.NieceNephew,
-						GenerationsRemoved: 2,
-					},
-					Exp2: entity.Lineage{
-						Description:        "great aunt/uncle",
-						Type:               entity.AuntUncle,
-						GenerationsRemoved: -2,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkGrandmother},
+						R1: entity.Relationship{
+							Description:        "grand niece/nephew",
+							Type:               entity.NieceNephew,
+							SourceID:           jfkJr,
+							TargetID:           jfkAunt,
+							GenerationsRemoved: 2,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkFather}, {ID: jfkGrandmother}},
+						},
+						R2: entity.Relationship{
+							Description:        "great aunt/uncle",
+							Type:               entity.AuntUncle,
+							SourceID:           jfkAunt,
+							TargetID:           jfkJr,
+							GenerationsRemoved: -2,
+							Path:               []entity.Person{{ID: jfkAunt}, {ID: jfkGrandmother}},
+						},
 					},
 				},
 			}
@@ -266,15 +370,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     rfk,
 					InP2:     jfkJr,
-					Exp1: entity.Lineage{
-						Description:        "aunt/uncle",
-						Type:               entity.AuntUncle,
-						GenerationsRemoved: -1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "niece/nephew",
-						Type:               entity.NieceNephew,
-						GenerationsRemoved: 1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "aunt/uncle",
+							Type:               entity.AuntUncle,
+							SourceID:           rfk,
+							TargetID:           jfkJr,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: rfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "niece/nephew",
+							Type:               entity.NieceNephew,
+							SourceID:           jfkJr,
+							TargetID:           rfk,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}},
+						},
 					},
 				},
 				{
@@ -282,15 +395,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkAunt,
 					InP2:     jfkJr,
-					Exp1: entity.Lineage{
-						Description:        "great aunt/uncle",
-						Type:               entity.AuntUncle,
-						GenerationsRemoved: -2,
-					},
-					Exp2: entity.Lineage{
-						Description:        "grand niece/nephew",
-						Type:               entity.NieceNephew,
-						GenerationsRemoved: 2,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkGrandmother},
+						R1: entity.Relationship{
+							Description:        "great aunt/uncle",
+							Type:               entity.AuntUncle,
+							SourceID:           jfkAunt,
+							TargetID:           jfkJr,
+							GenerationsRemoved: -2,
+							Path:               []entity.Person{{ID: jfkAunt}, {ID: jfkGrandmother}},
+						},
+						R2: entity.Relationship{
+							Description:        "grand niece/nephew",
+							Type:               entity.NieceNephew,
+							SourceID:           jfkJr,
+							TargetID:           jfkAunt,
+							GenerationsRemoved: 2,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkFather}, {ID: jfkGrandmother}},
+						},
 					},
 				},
 			}
@@ -307,15 +429,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkJr,
 					InP2:     rfkJr,
-					Exp1: entity.Lineage{
-						Description:        "1st cousin",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 0,
-					},
-					Exp2: entity.Lineage{
-						Description:        "1st cousin",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 0,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "1st cousin",
+							Type:               entity.Cousin,
+							SourceID:           jfkJr,
+							TargetID:           rfkJr,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "1st cousin",
+							Type:               entity.Cousin,
+							SourceID:           rfkJr,
+							TargetID:           jfkJr,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: rfkJr}, {ID: rfk}, {ID: jfkMother}},
+						},
 					},
 				},
 				{
@@ -323,15 +454,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jfkJr,
 					InP2:     jpk3,
-					Exp1: entity.Lineage{
-						Description:        "1st cousin 1x removed",
-						Type:               entity.Cousin,
-						GenerationsRemoved: -1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "1st cousin 1x removed",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "1st cousin 1x removed",
+							Type:               entity.Cousin,
+							SourceID:           jfkJr,
+							TargetID:           jpk3,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "1st cousin 1x removed",
+							Type:               entity.Cousin,
+							SourceID:           jpk3,
+							TargetID:           jfkJr,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jpk3}, {ID: jpk2}, {ID: rfk}, {ID: jfkMother}},
+						},
 					},
 				},
 				{
@@ -339,15 +479,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jpk3,
 					InP2:     jfkJr,
-					Exp1: entity.Lineage{
-						Description:        "1st cousin 1x removed",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 1,
-					},
-					Exp2: entity.Lineage{
-						Description:        "1st cousin 1x removed",
-						Type:               entity.Cousin,
-						GenerationsRemoved: -1,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "1st cousin 1x removed",
+							Type:               entity.Cousin,
+							SourceID:           jpk3,
+							TargetID:           jfkJr,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jpk3}, {ID: jpk2}, {ID: rfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "1st cousin 1x removed",
+							Type:               entity.Cousin,
+							SourceID:           jfkJr,
+							TargetID:           jpk3,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}},
+						},
 					},
 				},
 				{
@@ -355,15 +504,24 @@ func TestRelatorRelate(t *testing.T) {
 					InPeople: kennedys,
 					InP1:     jpk3,
 					InP2:     arnoldDaughter,
-					Exp1: entity.Lineage{
-						Description:        "2nd cousin",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 0,
-					},
-					Exp2: entity.Lineage{
-						Description:        "2nd cousin",
-						Type:               entity.Cousin,
-						GenerationsRemoved: 0,
+					Exp: entity.MutualRelationship{
+						CommonPerson: &entity.Person{ID: jfkMother},
+						R1: entity.Relationship{
+							Description:        "2nd cousin",
+							Type:               entity.Cousin,
+							SourceID:           jpk3,
+							TargetID:           arnoldDaughter,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jpk3}, {ID: jpk2}, {ID: rfk}, {ID: jfkMother}},
+						},
+						R2: entity.Relationship{
+							Description:        "2nd cousin",
+							Type:               entity.Cousin,
+							SourceID:           arnoldDaughter,
+							TargetID:           jpk3,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: arnoldDaughter}, {ID: mariaS}, {ID: jfkSister}, {ID: jfkMother}},
+						},
 					},
 				},
 			}
@@ -372,38 +530,317 @@ func TestRelatorRelate(t *testing.T) {
 				t.Run(test.Name, func(t *testing.T) { runTest(t, test) })
 			}
 		})
+
+		t.Run("affinal", func(t *testing.T) {
+			tests := []Testcase{
+				{
+					Name:     entity.Spouse.String(),
+					InPeople: kennedys,
+					InP1:     jfk,
+					InP2:     jfkWife,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: jfk},
+							Person2: &entity.Person{ID: jfkWife},
+						},
+						R1: entity.Relationship{
+							Description:        "spouse",
+							Type:               entity.Spouse,
+							SourceID:           jfk,
+							TargetID:           jfkWife,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "spouse",
+							Type:               entity.Spouse,
+							SourceID:           jfkWife,
+							TargetID:           jfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfkWife}},
+						},
+					},
+				},
+				{
+					Name:     entity.SiblingInLaw.String(),
+					InPeople: kennedys,
+					InP1:     jfkWife,
+					InP2:     rfk,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: jfk},
+							Person2: &entity.Person{ID: jfkWife},
+						},
+						R1: entity.Relationship{
+							Description:        "sibling in-law",
+							Type:               entity.SiblingInLaw,
+							SourceID:           jfkWife,
+							TargetID:           rfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfkWife}, {ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "sibling in-law",
+							Type:               entity.SiblingInLaw,
+							SourceID:           rfk,
+							TargetID:           jfkWife,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: rfk}, {ID: jfkMother}, {ID: jfk}},
+						},
+					},
+				},
+				{
+					Name:     entity.SiblingInLaw.String() + " reverse order",
+					InPeople: kennedys,
+					InP1:     rfk,
+					InP2:     jfkWife,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: jfk},
+							Person2: &entity.Person{ID: jfkWife},
+						},
+						R1: entity.Relationship{
+							Description:        "sibling in-law",
+							Type:               entity.SiblingInLaw,
+							SourceID:           rfk,
+							TargetID:           jfkWife,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: rfk}, {ID: jfkMother}, {ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "sibling in-law",
+							Type:               entity.SiblingInLaw,
+							SourceID:           jfkWife,
+							TargetID:           rfk,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: jfkWife}, {ID: jfk}},
+						},
+					},
+				},
+				{
+					Name:     entity.ChildInLaw.String(),
+					InPeople: kennedys,
+					InP1:     jfkWife,
+					InP2:     jfkFather,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: jfk},
+							Person2: &entity.Person{ID: jfkWife},
+						},
+						R1: entity.Relationship{
+							Description:        "child in-law",
+							Type:               entity.ChildInLaw,
+							SourceID:           jfkWife,
+							TargetID:           jfkFather,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: jfkWife}, {ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "parent in-law",
+							Type:               entity.ParentInLaw,
+							SourceID:           jfkFather,
+							TargetID:           jfkWife,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkFather}, {ID: jfk}},
+						},
+					},
+				},
+				{
+					Name:     entity.ParentInLaw.String(),
+					InPeople: kennedys,
+					InP1:     jfkFather,
+					InP2:     jfkWife,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: jfk},
+							Person2: &entity.Person{ID: jfkWife},
+						},
+						R1: entity.Relationship{
+							Description:        "parent in-law",
+							Type:               entity.ParentInLaw,
+							SourceID:           jfkFather,
+							TargetID:           jfkWife,
+							GenerationsRemoved: -1,
+							Path:               []entity.Person{{ID: jfkFather}, {ID: jfk}},
+						},
+						R2: entity.Relationship{
+							Description:        "child in-law",
+							Type:               entity.ChildInLaw,
+							SourceID:           jfkWife,
+							TargetID:           jfkFather,
+							Path:               []entity.Person{{ID: jfkWife}, {ID: jfk}},
+							GenerationsRemoved: 1,
+						},
+					},
+				},
+				{
+					Name:     entity.AuntUncleInLaw.String(),
+					InPeople: kennedys,
+					InP1:     jfk,
+					InP2:     arnold,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: mariaS},
+							Person2: &entity.Person{ID: arnold},
+						},
+						R1: entity.Relationship{
+							Description:        "aunt/uncle in-law",
+							Type:               entity.AuntUncleInLaw,
+							SourceID:           jfk,
+							TargetID:           arnold,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkMother}, {ID: jfkSister}, {ID: mariaS}},
+							GenerationsRemoved: -1,
+						},
+						R2: entity.Relationship{
+							Description:        "niece/nephew in-law",
+							Type:               entity.NieceNephewInLaw,
+							SourceID:           arnold,
+							TargetID:           jfk,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: arnold}, {ID: mariaS}},
+						},
+					},
+				},
+				{
+					Name:     entity.CousinInLaw.String(),
+					InPeople: kennedys,
+					InP1:     arnold,
+					InP2:     jfkJr,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: mariaS},
+							Person2: &entity.Person{ID: arnold},
+						},
+						R1: entity.Relationship{
+							Description:        "1st cousin in-law",
+							Type:               entity.CousinInLaw,
+							SourceID:           arnold,
+							TargetID:           jfkJr,
+							GenerationsRemoved: 0,
+							Path:               []entity.Person{{ID: arnold}, {ID: mariaS}},
+						},
+						R2: entity.Relationship{
+							Description:        "1st cousin in-law",
+							Type:               entity.CousinInLaw,
+							SourceID:           jfkJr,
+							TargetID:           arnold,
+							Path:               []entity.Person{{ID: jfkJr}, {ID: jfk}, {ID: jfkMother}, {ID: jfkSister}, {ID: mariaS}},
+							GenerationsRemoved: 0,
+						},
+					},
+				},
+				{
+					Name:     entity.NieceNephewInLaw.String(),
+					InPeople: kennedys,
+					InP1:     arnold,
+					InP2:     jfk,
+					Exp: entity.MutualRelationship{
+						Union: &entity.Union{
+							Person1: &entity.Person{ID: mariaS},
+							Person2: &entity.Person{ID: arnold},
+						},
+						R1: entity.Relationship{
+							Description:        "niece/nephew in-law",
+							Type:               entity.NieceNephewInLaw,
+							SourceID:           arnold,
+							TargetID:           jfk,
+							GenerationsRemoved: 1,
+							Path:               []entity.Person{{ID: arnold}, {ID: mariaS}},
+						},
+						R2: entity.Relationship{
+							Description:        "aunt/uncle in-law",
+							Type:               entity.AuntUncleInLaw,
+							SourceID:           jfk,
+							TargetID:           arnold,
+							Path:               []entity.Person{{ID: jfk}, {ID: jfkMother}, {ID: jfkSister}, {ID: mariaS}},
+							GenerationsRemoved: -1,
+						},
+					},
+				},
+			}
+			for _, test := range tests {
+				t.Run(test.Name, func(t *testing.T) { runTest(t, test) })
+			}
+		})
 	})
 }
 
-func testRelationship(t *testing.T, actual, expected entity.Lineage) {
+func testPerson(t *testing.T, errMsgPrefix string, actual, expected *entity.Person) {
 	t.Helper()
 
-	if actual.Description != expected.Description {
-		t.Errorf("wrong Description; got %q, exp %q", actual.Description, expected.Description)
+	if actual != nil && expected == nil {
+		t.Errorf("%s; expected person to be nil", errMsgPrefix)
+	} else if actual == nil && expected != nil {
+		t.Errorf("%s; expected person to be non-nil", errMsgPrefix)
+	} else if actual != nil && expected != nil {
+		if actual.ID != expected.ID {
+			t.Errorf(
+				"%s; wrong ID; got %q, exp %q",
+				errMsgPrefix, actual.ID, expected.ID,
+			)
+		}
 	}
-	if actual.Type != expected.Type {
-		t.Errorf("wrong Type; got %q, exp %q", actual.Type.String(), expected.Type.String())
-	}
-	if actual.GenerationsRemoved != expected.GenerationsRemoved {
-		t.Errorf("wrong GenerationsRemoved; got %d, exp %d", actual.GenerationsRemoved, expected.GenerationsRemoved)
-	}
-
-	// The CommonAncestors field is not checked here b/c it can vary if there
-	// are multiple paths to the same common ancestor. The current path finding
-	// implementation just picks one, and it's a bit non-deterministic due to
-	// the way some of the underlying data structures (maps) are traversed.
 }
 
-func parseYear(t *testing.T, in string) *time.Time {
+func testUnion(t *testing.T, errMsgPrefix string, actual, expected *entity.Union) {
 	t.Helper()
 
-	if in == "" {
-		return nil
+	if actual != nil && expected == nil {
+		t.Errorf("%s; expected union to be nil", errMsgPrefix)
+	} else if actual == nil && expected != nil {
+		t.Errorf("%s; expected union to be non-nil", errMsgPrefix)
+	} else if actual != nil && expected != nil {
+		testPerson(t, errMsgPrefix+".Person1", actual.Person1, expected.Person1)
+		testPerson(t, errMsgPrefix+".Person2", actual.Person2, expected.Person2)
+	}
+}
+
+func testRelationship(t *testing.T, errMsgPrefix string, actual, expected entity.Relationship) {
+	t.Helper()
+
+	if actual.SourceID != expected.SourceID {
+		t.Errorf("%s; wrong SourceID; got %q, exp %q", errMsgPrefix, actual.SourceID, expected.SourceID)
+	}
+	if actual.TargetID != expected.TargetID {
+		t.Errorf("%s; wrong TargetID; got %q, exp %q", errMsgPrefix, actual.TargetID, expected.TargetID)
+	}
+	if actual.Description != expected.Description {
+		t.Errorf("%s; wrong Description; got %q, exp %q", errMsgPrefix, actual.Description, expected.Description)
+	}
+	if actual.Type != expected.Type {
+		t.Errorf("%s; wrong Type; got %q, exp %q", errMsgPrefix, actual.Type.String(), expected.Type.String())
+	}
+	if actual.GenerationsRemoved != expected.GenerationsRemoved {
+		t.Errorf("%s; wrong GenerationsRemoved; got %d, exp %d", errMsgPrefix, actual.GenerationsRemoved, expected.GenerationsRemoved)
 	}
 
-	date, err := time.Parse("2006", in)
+	// To keep things simple, the Path field only has one path, even
+	// when multiple paths to the same common ancestor exist. The chosen path is
+	// involves the lexically-greater ID so that results are determinstic.
+
+	if len(actual.Path) != len(expected.Path) {
+		t.Errorf("%s; wrong length for Path; got %d, exp %d", errMsgPrefix, len(actual.Path), len(expected.Path))
+		for _, val := range actual.Path {
+			mustJSON(t, "got: ", map[string]any{"id": val.ID, "name": val.Name.Full()})
+		}
+		for _, val := range expected.Path {
+			mustJSON(t, "exp: ", map[string]any{"id": val.ID, "name": val.Name.Full()})
+		}
+	} else {
+		for i, got := range actual.Path {
+			exp := expected.Path[i]
+			if got.ID != exp.ID {
+				t.Errorf("%s; wrong ID on Path[%d]; got %q, exp %q", errMsgPrefix, i, got.ID, exp.ID)
+			}
+		}
+	}
+}
+
+func mustJSON(t *testing.T, banner string, in any) {
+	t.Helper()
+	raw, err := json.Marshal(in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &date
+	t.Logf("%s %s", banner, raw)
 }

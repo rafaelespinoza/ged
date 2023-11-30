@@ -8,18 +8,18 @@ import (
 	"github.com/rafaelespinoza/ged/internal/entity"
 )
 
-// makeLineages computes the familial relationship between two ancestral
+// makeRelationships computes the familial relationship between two ancestral
 // lines. Inputs line1 and line2 are both ancestral lines that should have the
 // IDs of each person as the first item. It's based off of the PHP-based sample
 // in https://stackoverflow.com/a/1087345.
-func makeLineages(r *relator, line1, line2 []string) (out1, out2 entity.Lineage, err error) {
-	out1 = entity.Lineage{
+func makeRelationships(r *relator, line1, line2 []string) (out1, out2 entity.Relationship, err error) {
+	out1 = entity.Relationship{
 		GenerationsRemoved: len(line1) - len(line2),
-		CommonAncestors:    buildCommonAncestors(r, line1),
+		Path:               buildCommonAncestors(r, line1),
 	}
-	out2 = entity.Lineage{
+	out2 = entity.Relationship{
 		GenerationsRemoved: len(line2) - len(line1),
-		CommonAncestors:    buildCommonAncestors(r, line2),
+		Path:               buildCommonAncestors(r, line2),
 	}
 
 	// calculate the number of generations from the start of each ancestral line
@@ -60,14 +60,14 @@ func makeLineages(r *relator, line1, line2 []string) (out1, out2 entity.Lineage,
 		dist2 *= -1
 	}
 
-	desc, _, err := describeLineage(out1.Type, out1.GenerationsRemoved, dist1)
+	desc, _, err := describeRelationship(out1.Type, out1.GenerationsRemoved, dist1)
 	if err != nil {
 		err = fmt.Errorf("lineage 1: %w", err)
 		return
 	}
 	out1.Description = desc
 
-	desc, _, err = describeLineage(out2.Type, out2.GenerationsRemoved, dist2)
+	desc, _, err = describeRelationship(out2.Type, out2.GenerationsRemoved, dist2)
 	if err != nil {
 		err = fmt.Errorf("lineage 2: %w", err)
 		return
@@ -93,7 +93,7 @@ func buildCommonAncestors(r *relator, path []string) []entity.Person {
 	return out
 }
 
-func describeLineage(t entity.LineageType, generationsRemoved int, generationsSinceCommonAncestor int) (out string, related bool, err error) {
+func describeRelationship(t entity.RelationshipType, generationsRemoved int, generationsSinceCommonAncestor int) (out string, related bool, err error) {
 	related = true
 
 	switch t {

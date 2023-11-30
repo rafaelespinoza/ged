@@ -86,7 +86,7 @@ Examples:
 		Run: func(ctx context.Context) (err error) {
 			var (
 				people []*entity.Person
-				r1, r2 entity.Lineage
+				result entity.MutualRelationship
 			)
 			switch inputFormat {
 			case "json":
@@ -110,33 +110,11 @@ Examples:
 				}
 			}
 
-			if r1, r2, err = srv.NewRelator(people).Relate(ctx, p1ID, p2ID); err != nil {
+			if result, err = srv.NewRelator(people).Relate(ctx, p1ID, p2ID); err != nil {
 				return
 			}
 
-			for _, rel := range []entity.Lineage{r1, r2} {
-				commonAncestors := make([]map[string]any, len(rel.CommonAncestors))
-
-				for j, person := range rel.CommonAncestors {
-					commonAncestors[j] = map[string]any{
-						"id":         person.ID,
-						"name":       person.Name,
-						"birth_date": formatDate(person.Birthdate),
-						"death_date": formatDate(person.Deathdate),
-					}
-				}
-
-				err = writeJSON(os.Stdout, map[string]any{
-					"description":         rel.Description,
-					"type":                rel.Type.String(),
-					"generations_removed": rel.GenerationsRemoved,
-					"common_ancestors":    commonAncestors,
-				})
-				if err != nil {
-					return
-				}
-			}
-
+			err = writeJSON(os.Stdout, formatMutualRelationship(result))
 			return
 		},
 	}
@@ -274,4 +252,60 @@ func formatDate(in *time.Time) *string {
 
 	val := in.Format(time.DateOnly)
 	return &val
+}
+
+func formatMutualRelationship(in entity.MutualRelationship) (out map[string]any) {
+	out = map[string]any{
+		"union":          nil,
+		"common_person":  nil,
+		"relationship_1": nil,
+		"relationship_2": nil,
+	}
+
+	if in.CommonPerson != nil {
+		out["common_person"] = formatPerson(*in.CommonPerson)
+	}
+
+	if in.Union != nil {
+		var p1, p2 map[string]any
+		if in.Union.Person1 != nil {
+			p1 = formatPerson(*in.Union.Person1)
+		}
+		if in.Union.Person2 != nil {
+			p2 = formatPerson(*in.Union.Person2)
+		}
+		out["union"] = map[string]any{"person_1": p1, "person_2": p2}
+	}
+
+	type Tuple struct {
+		Dest string
+		Rel  entity.Relationship
+	}
+
+	for _, tup := range []Tuple{{"relationship_1", in.R1}, {"relationship_2", in.R2}} {
+		path := make([]map[string]any, len(tup.Rel.Path))
+		for j, person := range tup.Rel.Path {
+			path[j] = formatPerson(person)
+		}
+
+		out[tup.Dest] = map[string]any{
+			"description":         tup.Rel.Description,
+			"type":                tup.Rel.Type.String(),
+			"generations_removed": tup.Rel.GenerationsRemoved,
+			"path":                path,
+			"source_id":           tup.Rel.SourceID,
+			"target_id":           tup.Rel.TargetID,
+		}
+	}
+
+	return
+}
+
+func formatPerson(p entity.Person) (out map[string]any) {
+	return map[string]any{
+		"id":         p.ID,
+		"name":       p.Name,
+		"birth_date": formatDate(p.Birthdate),
+		"death_date": formatDate(p.Deathdate),
+	}
 }

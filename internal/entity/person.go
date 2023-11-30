@@ -21,4 +21,5 @@ type Person struct {
 	Deathdate *time.Time
 	Parents   []*Person
 	Children  []*Person
+	Spouses   []*Person
 }

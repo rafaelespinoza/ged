@@ -103,10 +103,22 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 		}
 
 		childTuples := make([]*entity.Person, 0, len(individual.FamiliesAsPartner)*2)
+		spouseTuples := make([]*entity.Person, 0, len(individual.FamiliesAsPartner))
 		for _, famID := range individual.FamiliesAsPartner {
 			familyRecord, ok := gedcomFamiliesByID[famID]
 			if !ok {
 				return nil, fmt.Errorf("gedcom family as partner %q not found for individual %q", famID, individual.Xref)
+			}
+
+			for _, spouseID := range familyRecord.ParentXrefs {
+				spouse, ok := out[spouseID]
+				if !ok {
+					return nil, fmt.Errorf("entity spouse %q from family %q not found for individual as partner %q", spouseID, famID, individual.Xref)
+				}
+				if spouseID == individual.Xref {
+					continue
+				}
+				spouseTuples = append(spouseTuples, simplifyPerson(spouse))
 			}
 
 			for _, childID := range familyRecord.ChildXrefs {
@@ -121,6 +133,7 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 		person := out[individual.Xref]
 		person.Parents = slices.Clip(parentTuples)
 		person.Children = slices.Clip(childTuples)
+		person.Spouses = slices.Clip(spouseTuples)
 		out[individual.Xref] = person
 	}
 
@@ -190,10 +203,10 @@ func convertGedcomFamilies(ctx context.Context, records []*gedcom.FamilyRecord, 
 	return out, nil
 }
 
-// simplifyPerson intentionally does not copy the Children or Parent fields to
-// help keep each output item succinct. This is most beneficial when marshaling
-// the results. Without such a limit, you could end up with generations upon
-// generations of deeply-nested structures.
+// simplifyPerson intentionally does not copy the Children, Parent, or Spouses
+// fields to help keep each output item succinct. This is most beneficial when
+// marshaling the results. Without such a limit, you could end up with
+// generations upon generations of deeply-nested structures.
 func simplifyPerson(in *entity.Person) *entity.Person {
 	return &entity.Person{
 		ID:        in.ID,
