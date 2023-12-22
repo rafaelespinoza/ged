@@ -17,8 +17,8 @@ type IndividualRecord struct {
 	Xref              string
 	Names             []PersonalName
 	Sex               enumset.Sex
-	Birth             *Event
-	Death             *Event
+	Birth             []*Event
+	Death             []*Event
 	FamiliesAsChild   []string // Xref IDs of families where the person is a child.
 	FamiliesAsPartner []string // Xref IDs of families where the person is a partner, such as a spouse.
 	SourceCitations   []*SourceCitation
@@ -58,14 +58,14 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing BIRT, skipping")
 			} else {
-				out.Birth = event
+				out.Birth = append(out.Birth, event)
 			}
 		case "DEAT":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
 				log.Error(ctx, fields, err, "error parsing DEAT, skipping")
 			} else {
-				out.Death = event
+				out.Death = append(out.Death, event)
 			}
 		case "SEX":
 			out.Sex = enumset.NewSex(subline.Payload)

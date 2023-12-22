@@ -65,15 +65,19 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 		if len(individual.Names) > 0 {
 			inputName = individual.Names[0]
 		}
-		if individual.Birth != nil {
-			birthdate, err = entity.NewDate(individual.Birth.Date, individual.Birth.DateRange)
+		// The GEDCOM7 spec says that unless otherwise specified (how to specify
+		// that is not specified), the first value in a collection is considered
+		// the preferred value. Just pick the first one, if available.
+		if len(individual.Birth) > 0 && individual.Birth[0] != nil {
+			birthdate, err = entity.NewDate(individual.Birth[0].Date, individual.Birth[0].DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Birth.Date")
+				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Birth")
 				return nil, err
 			}
 		}
-		if individual.Death != nil {
-			deathdate, err = entity.NewDate(individual.Death.Date, individual.Death.DateRange)
+
+		if len(individual.Death) > 0 && individual.Death[0] != nil {
+			deathdate, err = entity.NewDate(individual.Death[0].Date, individual.Death[0].DateRange)
 			if err != nil {
 				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Death.Date")
 				return nil, err

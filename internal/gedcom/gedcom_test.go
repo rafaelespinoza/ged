@@ -229,8 +229,8 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Charlie /Foxtrot/", Given: "Charlie", Nickname: "Chuck", Surname: "Foxtrot"},
 				},
-				Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
-				Death:             &gedcom.Event{Date: mustParseDate(t, "2038-01-19")},
+				Birth:             []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01")}},
+				Death:             []*gedcom.Event{{Date: mustParseDate(t, "2038-01-19")}},
 				FamiliesAsPartner: []string{"@F1@"},
 			},
 			{
@@ -238,8 +238,8 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Charlene /Foxtrot/", Given: "Charlene", Nickname: "Y2K22", Surname: "Foxtrot"},
 				},
-				Birth:             &gedcom.Event{Date: mustParseDate(t, "1970-01-01")},
-				Death:             &gedcom.Event{Date: mustParseDate(t, "2022-01-01")},
+				Birth:             []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01")}},
+				Death:             []*gedcom.Event{{Date: mustParseDate(t, "2022-01-01")}},
 				FamiliesAsPartner: []string{"@F1@"},
 			},
 			{
@@ -247,8 +247,8 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Mike /Foxtrot/", Given: "Mike", Nickname: "Millennium Bug", Surname: "Foxtrot"},
 				},
-				Birth: &gedcom.Event{Date: mustParseDate(t, "1995-06-12")},
-				Death: &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
+				Birth: []*gedcom.Event{{Date: mustParseDate(t, "1995-06-12")}},
+				Death: []*gedcom.Event{{Date: mustParseDate(t, "2000-01-01")}},
 				Notes: []*gedcom.Note{
 					{Payload: `The year 2000 problem, also commonly known as the Y2K problem, Y2K scare, millennium bug, Y2K bug, Y2K glitch, Y2K error, or simply Y2K,
 refers to potential computer errors related to the formatting and storage of calendar data for dates in and after the year 2000.`,
