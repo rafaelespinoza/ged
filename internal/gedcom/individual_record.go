@@ -22,6 +22,7 @@ type IndividualRecord struct {
 	FamiliesAsChild   []string // Xref IDs of families where the person is a child.
 	FamiliesAsPartner []string // Xref IDs of families where the person is a partner, such as a spouse.
 	SourceCitations   []*SourceCitation
+	Notes             []*Note
 }
 
 func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes []*gedcom.Node) (out *IndividualRecord, err error) {
@@ -78,6 +79,12 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 				return nil, fmt.Errorf("error parsing source citation: %w", err)
 			}
 			out.SourceCitations = append(out.SourceCitations, citation)
+		case "NOTE":
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

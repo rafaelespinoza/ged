@@ -22,6 +22,7 @@ type Event struct {
 	DateRange       *date.Range
 	Place           string
 	SourceCitations []*SourceCitation
+	Notes           []*Note
 }
 
 func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node) (out *Event, err error) {
@@ -67,6 +68,12 @@ func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node
 				return nil, fmt.Errorf("error parsing source citation: %w", err)
 			}
 			out.SourceCitations = append(out.SourceCitations, citation)
+		case "NOTE":
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

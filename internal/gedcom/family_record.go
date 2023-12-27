@@ -19,6 +19,7 @@ type FamilyRecord struct {
 	DivorcedAt      *Event
 	AnnulledAt      *Event
 	SourceCitations []*SourceCitation
+	Notes           []*Note
 }
 
 func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes []*gedcom.Node) (out *FamilyRecord, err error) {
@@ -74,6 +75,12 @@ func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 				return nil, fmt.Errorf("error parsing source citation: %w", err)
 			}
 			out.SourceCitations = append(out.SourceCitations, citation)
+		case "NOTE":
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

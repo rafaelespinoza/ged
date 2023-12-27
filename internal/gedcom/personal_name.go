@@ -18,6 +18,7 @@ type PersonalName struct {
 	Payload         string
 	Type            enumset.NameType
 	SourceCitations []*SourceCitation
+	Notes           []*Note
 
 	// The following fields are PERSONAL_NAME_PIECES.
 	NamePrefix    string // URI is g7:NPFX
@@ -70,6 +71,12 @@ func parsePersonalName(ctx context.Context, line *gedcom7.Line, subnodes []*gedc
 				return nil, fmt.Errorf("error parsing source citation: %w", err)
 			}
 			out.SourceCitations = append(out.SourceCitations, citation)
+		case "NOTE":
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			// There may be some metadata-related tags such as NAME-TYPE , or
 			// NOTE. For now, not parsing those, but might try to do so later.

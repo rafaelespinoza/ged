@@ -18,7 +18,8 @@ type SourceCitation struct {
 	Page string
 	// Data is meant to represent extra info about a source. Its URI is G7:SOUR-DATA.
 	// This field is rather free-form, there is no payload.
-	Data map[string]string
+	Data  map[string]string
+	Notes []*Note
 }
 
 func parseSourceCitation(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node) (out *SourceCitation, err error) {
@@ -53,6 +54,12 @@ func parseSourceCitation(ctx context.Context, line *gedcom7.Line, subnodes []*ge
 				}
 				out.Data[dataSubline.Tag] = dataSubline.Payload
 			}
+		case "NOTE":
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}

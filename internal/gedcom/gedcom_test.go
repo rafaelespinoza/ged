@@ -146,6 +146,9 @@ func TestReadRecordsFields(t *testing.T) {
 2 DATE 12 JUN 1995
 1 DEAT
 2 DATE 1 JAN 2000
+1 NOTE The year 2000 problem, also commonly known as the Y2K problem, Y2K scare, millennium bug, Y2K bug, Y2K glitch, Y2K error, or simply Y2K,
+2 CONT refers to potential computer errors related to the formatting and storage of calendar data for dates in and after the year 2000.
+2 LANG en
 1 FAMC @F1@
 0 @F1@ FAM
 1 HUSB @I1@
@@ -162,6 +165,8 @@ func TestReadRecordsFields(t *testing.T) {
 1 ANUL
 2 TYPE annulment
 2 DATE 2001
+1 NOTE Test that the parser can also read th
+2 CONC e tag, CONC.
 0 @S1@ SOUR
 1 _UID 046A3AD191FF4DD3B0693F406E0A7FB87012
 1 DATA
@@ -196,6 +201,7 @@ func TestReadRecordsFields(t *testing.T) {
 				MarriedAt:   &gedcom.Event{Date: mustParseDate(t, "1985-01-18")},
 				DivorcedAt:  &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
 				AnnulledAt:  &gedcom.Event{Date: mustParseDate(t, "2001-01-01")},
+				Notes:       []*gedcom.Note{{Payload: "Test that the parser can also read the tag, CONC."}},
 			},
 		}
 		if len(records.Families) != len(expected) {
@@ -212,6 +218,7 @@ func TestReadRecordsFields(t *testing.T) {
 
 			cmpStringSlices(t, errMsgPrefix+".ParentXrefs", got.ParentXrefs, exp.ParentXrefs)
 			cmpStringSlices(t, errMsgPrefix+".ChildXrefs", got.ChildXrefs, exp.ChildXrefs)
+			testNotes(t, errMsgPrefix+".Notes", got.Notes, exp.Notes)
 		}
 	})
 
@@ -240,8 +247,13 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Mike /Foxtrot/", Given: "Mike", Nickname: "Millennium Bug", Surname: "Foxtrot"},
 				},
-				Birth:           &gedcom.Event{Date: mustParseDate(t, "1995-06-12")},
-				Death:           &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
+				Birth: &gedcom.Event{Date: mustParseDate(t, "1995-06-12")},
+				Death: &gedcom.Event{Date: mustParseDate(t, "2000-01-01")},
+				Notes: []*gedcom.Note{
+					{Payload: `The year 2000 problem, also commonly known as the Y2K problem, Y2K scare, millennium bug, Y2K bug, Y2K glitch, Y2K error, or simply Y2K,
+refers to potential computer errors related to the formatting and storage of calendar data for dates in and after the year 2000.`,
+						Lang: "en"},
+				},
 				FamiliesAsChild: []string{"@F1@"},
 			},
 		}
@@ -268,6 +280,7 @@ func TestReadRecordsFields(t *testing.T) {
 
 			cmpStringSlices(t, errMsgPrefix+".FamiliesAsPartner", got.FamiliesAsPartner, exp.FamiliesAsPartner)
 			cmpStringSlices(t, errMsgPrefix+".FamiliesAsChild", got.FamiliesAsChild, exp.FamiliesAsChild)
+			testNotes(t, errMsgPrefix+".Notes", got.Notes, exp.Notes)
 		}
 	})
 
@@ -276,7 +289,7 @@ func TestReadRecordsFields(t *testing.T) {
 			{
 				Xref:          "@S1@",
 				Title:         "New York Times, March 4, 1946, pp. 1,3.",
-				Note:          "Geneanet Community Trees Index",
+				Notes:         []*gedcom.Note{{Payload: "Geneanet Community Trees Index"}},
 				Text:          "yes",
 				RepositoryIDs: []string{"@R0@"},
 			},
@@ -315,11 +328,9 @@ func TestReadRecordsFields(t *testing.T) {
 			if got.Text != exp.Text {
 				t.Errorf("%s; wrong Text, got %q, exp %q", errMsgPrefix, got.Text, exp.Text)
 			}
-			if got.Note != exp.Note {
-				t.Errorf("%s; wrong Note, got %q, exp %q", errMsgPrefix, got.Note, exp.Note)
-			}
 
 			cmpStringSlices(t, errMsgPrefix+".RepositoryIDs", got.RepositoryIDs, exp.RepositoryIDs)
+			testNotes(t, errMsgPrefix+".Notes", got.Notes, exp.Notes)
 		}
 	})
 }
@@ -403,6 +414,33 @@ func cmpStringMaps(t *testing.T, errMsgPrefix string, actual, expected map[strin
 
 		if got != exp {
 			t.Errorf("%s[%v]; got %q, exp %q", errMsgPrefix, key, got, exp)
+		}
+	}
+}
+
+func testNotes(t *testing.T, errMsgPrefix string, actual, expected []*gedcom.Note) {
+	if len(actual) != len(expected) {
+		t.Errorf("%s; wrong length; got %d, exp %d", errMsgPrefix, len(actual), len(expected))
+	} else {
+		for i, got := range actual {
+			errMsgPrefix := fmt.Sprintf("%s[%d]", errMsgPrefix, i)
+			exp := expected[i]
+
+			if got.Payload != exp.Payload {
+				t.Errorf("%s; wrong Payload, got %q, exp %q", errMsgPrefix, got.Payload, exp.Payload)
+			}
+			if got.Lang != exp.Lang {
+				t.Errorf("%s; wrong Lang, got %q, exp %q", errMsgPrefix, got.Lang, exp.Lang)
+			}
+
+			if len(got.SourceCitations) != len(exp.SourceCitations) {
+				t.Errorf("%s; wrong number of SourceCitations; got %d, exp %d", errMsgPrefix, len(got.SourceCitations), len(exp.SourceCitations))
+			} else {
+				for j, got := range got.SourceCitations {
+					errMsgPrefix := fmt.Sprintf("%s[%d], ", errMsgPrefix, j)
+					cmpSourceCitation(t, errMsgPrefix, got, exp.SourceCitations[j])
+				}
+			}
 		}
 	}
 }

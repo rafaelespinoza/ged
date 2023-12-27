@@ -2,6 +2,7 @@ package gedcom
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
@@ -17,8 +18,7 @@ type SourceRecord struct {
 	Publication   string
 	Text          string
 	RepositoryIDs []string
-	Note          string
-	OriginalLines []string
+	Notes         []*Note
 
 	// TODO: add other fields such as Data, MultimediaLink, ChangeDate, CreationDate, as needed.
 }
@@ -58,7 +58,11 @@ func parseSourceRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 		case "REPO":
 			out.RepositoryIDs = append(out.RepositoryIDs, subline.Payload)
 		case "NOTE":
-			out.Note = subline.Payload
+			note, err := parseNote(ctx, subline, subnode.GetSubnodes())
+			if err != nil {
+				return nil, fmt.Errorf("error parsing note: %w", err)
+			}
+			out.Notes = append(out.Notes, note)
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}
