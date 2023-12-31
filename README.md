@@ -94,7 +94,9 @@ $ bin/main draw -output-format=mermaid < testdata/simpsons.ged > /tmp/ged/simpso
 $ bin/main draw -input-format=mermaid < /tmp/ged/simpsons.mermaid > /tmp/ged/simpsons.svg
 ```
 
-### relate
+### explore-data 
+
+#### relate
 
 Calculate relationship between 2 people.
 
@@ -105,5 +107,19 @@ $ ./explore-data.sh relate testdata/kennedy.ged
 
 If you don't have fzf or don't want to use it, specify the IDs of the people like so:
 ```sh
-$ bin/main relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged
+$ bin/main explore-data relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged
+```
+
+#### show
+
+Display details on a person in a simple group sheet view.
+
+If you have [fzf](https://github.com/junegunn/fzf) on your system, then use fuzzy search to select the people.
+```sh
+$ ./explore-data.sh show testdata/kennedy.ged
+```
+
+If you don't have fzf or don't want to use it, specify the ID of the person like so:
+```sh
+$ bin/main explore-data show -target-id @I10@ < testdata/kennedy.ged
 ```

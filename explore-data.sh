@@ -56,7 +56,7 @@ function relate() {
 		echo "${err_no_fzf}
 
 Example:
-$ bin/main relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged" | fold -s >&2
+$ bin/main explore-data relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged" | fold -s >&2
 		return 1
 	fi
 
@@ -90,7 +90,7 @@ $ bin/main relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged" | fold -s >&2
 	local -r fzf_on_enter='
 	p1=$(echo {+1} | awk "{ print \$1 }")
 	p2=$(echo {+1} | awk "{ print \$2 }")
-	${GED_BIN:?missing GED_BIN} -q relate -p1 "${p1}" -p2 "${p2}" <"${INFILE:?missing INFILE}"'
+	${GED_BIN:?missing GED_BIN} -q explore-data relate -p1 "${p1}" -p2 "${p2}" <"${INFILE:?missing INFILE}"'
 
 	_run_ged parse to-lines < "${infile}" | _run_fzf \
 		--header='Pick 2 people to compare. Press TAB to select/unselect. Press Enter when ready.' \

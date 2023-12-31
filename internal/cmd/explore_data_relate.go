@@ -13,7 +13,7 @@ import (
 	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
-func makeRelate(name string) alf.Directive {
+func makeExploreDataRelate(parentName, name string) alf.Directive {
 	var inputFormat, outputFormat, p1ID, p2ID string
 	supportedInputFormats := []string{"gedcom", "json"}
 	supportedOutputFormats := []string{"", "json"}
@@ -88,28 +88,19 @@ Examples:
 				return
 			}
 
-			mr := makeMutualRelationship(result)
+			mr := buildMutualRelationship(result)
 
 			switch outputFormat {
 			case supportedOutputFormats[1]:
 				err = writeJSON(os.Stdout, mr)
 			default:
-				err = formatMutualRelationship(os.Stdout, mr)
+				err = renderMutualRelationship(os.Stdout, mr)
 			}
 
 			return
 		},
 	}
 
-	return &out
-}
-
-func formatDate(in *entity.Date) *string {
-	if in == nil {
-		return nil
-	}
-
-	out := in.String()
 	return &out
 }
 
@@ -132,7 +123,7 @@ type (
 	}
 )
 
-func makeMutualRelationship(in entity.MutualRelationship) (out mutualRelationship) {
+func buildMutualRelationship(in entity.MutualRelationship) (out mutualRelationship) {
 	if in.CommonPerson != nil {
 		out.CommonPerson = simplifyPerson(*in.CommonPerson)
 	}
