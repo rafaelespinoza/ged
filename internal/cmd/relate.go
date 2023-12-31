@@ -10,7 +10,6 @@ import (
 	"github.com/rafaelespinoza/alf"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
-	"github.com/rafaelespinoza/ged/internal/log"
 	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
@@ -47,42 +46,27 @@ Format of input data:
 
 Choosing people to relate:
 	You must also select 2 people for which to calculate the relationship by
-	specifying their IDs. There are multiple ways to do this.
-
-	Directly, via flags -p1, -p2:
-		If you know both IDs ahead of time, you can input them directly via the
-		flags -p1 and p2. If you go this route, be sure to specify both values.
-
-	Via "fzf":
-		If you'd prefer to discover their IDs, you can do a fuzzy search.
-		This requires fzf, a really awesome fuzzy finder for the command line.
-		Check it out at:
-			https://github.com/junegunn/fzf
-		Once fzf is available, be sure to omit the flag values for -p1 and -p2.
-		The binary for fzf does not necessarily need to be in your PATH. You can
-		specify the path to fzf via the env var FZF_BIN.
+	specifying their IDs. Do this with flags -p1, -p2.
 
 Examples:
-	# Using gedcom-formatted data, use a fuzzy search to choose people to relate.
-	$ %s < path/to/data.ged
-
-	# Using json-formatted data.
-	$ %s -f json < path/to/data.json
-	$ jq '.' path/to/data.json | %s -f json
-
-	# Using gedcom-formatted data. Directly input person IDs.
+	# Using gedcom-formatted data.
 	$ %s -p1 @I111@ -p2 @I222@ < path/to/data.ged
 
-	# Using json-formatted data. Directly input person IDs.
+	# Using json-formatted data.
 	$ %s -f json -p1 @I111@ -p2 @I222@ < path/to/data.json
 `,
-					initUsageLine(name), fullName, fullName, fullName, fullName, fullName,
+					initUsageLine(name), fullName, fullName,
 				)
 				printFlagDefaults(flags)
 			}
 			return flags
 		},
 		Run: func(ctx context.Context) (err error) {
+			if p1ID == "" || p2ID == "" {
+				err = errors.New("Flags -p1 and -p2 are required. Should be the ID of person. Example: -p1 @I123@ -p2 @I234@")
+				return
+			}
+
 			var (
 				people []*entity.Person
 				result entity.MutualRelationship
@@ -96,15 +80,6 @@ Examples:
 				people = data.People
 			default:
 				if people, _, err = srv.ParseGedcom(ctx, os.Stdin); err != nil {
-					return
-				}
-			}
-
-			if p1ID != "" && p2ID == "" || p1ID == "" && p2ID != "" {
-				err = fmt.Errorf("presence of flag values for -p1 (%q) and -p2 (%q) are mutually-exclusive; pass in values for both flags or omit both", p1ID, p2ID)
-				return
-			} else if p1ID == "" && p2ID == "" {
-				if p1ID, p2ID, err = choosePeopleToRelate(ctx, people); err != nil {
 					return
 				}
 			}
@@ -127,33 +102,6 @@ Examples:
 	}
 
 	return &out
-}
-
-func choosePeopleToRelate(ctx context.Context, people []*entity.Person) (p1ID, p2ID string, err error) {
-	chooser, err := newFZFChooser(ctx, people)
-	if errors.Is(err, errNoFZF) {
-		log.Error(ctx, nil, err, "install fzf for a better user experience; see https://github.com/junegunn/fzf")
-	}
-	if err != nil {
-		return
-	}
-
-	p1ID, err = chooser.choosePersonID(ctx)
-	if err != nil {
-		err = fmt.Errorf("error on choice 1: %w", err)
-		return
-	}
-
-	p2ID, err = chooser.choosePersonID(ctx)
-	if err != nil {
-		err = fmt.Errorf("error on choice 2: %w", err)
-		return
-	}
-	return
-}
-
-type personIDChooser interface {
-	choosePersonID(ctx context.Context) (id string, err error)
 }
 
 func formatDate(in *entity.Date) *string {
