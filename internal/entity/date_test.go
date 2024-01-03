@@ -43,14 +43,14 @@ func TestDate(t *testing.T) {
 			InRange: &date.Range{
 				Lo: &date.Date{Display: "2006-01-02"},
 			},
-			ExpString: "2006-01-02 ...",
+			ExpString: ">= 2006-01-02",
 		},
 		{
 			Name: "Range: Hi",
 			InRange: &date.Range{
 				Hi: &date.Date{Display: "2038-01-19"},
 			},
-			ExpString: "... 2038-01-19",
+			ExpString: "<= 2038-01-19",
 		},
 	}
 

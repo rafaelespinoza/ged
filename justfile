@@ -2,7 +2,6 @@
 
 GO := "go"
 MAIN_BIN := "bin/main"
-
 SRC_PATHS := ". ./internal/..."
 
 # General-purpose arguments to pass to a command. May be overridden at invocation.
@@ -21,7 +20,7 @@ build: _bin_dir
 alias b := build
 
 # execute the built binary
-run +ARGS='help':
+@run +ARGS='help':
     {{ MAIN_BIN }} {{ ARGS }}
 
 alias r := run
@@ -46,3 +45,21 @@ test PKG_PATH='./...':
 
 _bin_dir:
     @mkdir -pv {{ parent_directory(MAIN_BIN) }}
+
+# Recipes for shell script maintenance rely on
+# * shellcheck: https://github.com/koalaman/shellcheck
+# * shfmt: https://github.com/mvdan/sh
+
+SCRIPTS := `git ls-files | grep '\.sh$'`
+
+# run shellcheck on scripts
+lint-scripts:
+    shellcheck {{ SCRIPTS }}
+
+# run shfmt on shell scripts
+fmt-scripts:
+    shfmt -ci -d -s -sr {{ SCRIPTS }}
+
+# run shfmt on shell scripts and overwrite files
+fmtw-scripts:
+    shfmt -ci -d -s -sr -w {{ SCRIPTS }}

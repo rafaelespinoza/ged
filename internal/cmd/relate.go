@@ -6,8 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/rafaelespinoza/alf"
 
@@ -17,14 +15,16 @@ import (
 )
 
 func makeRelate(name string) alf.Directive {
-	var inputFormat, p1ID, p2ID string
+	var inputFormat, outputFormat, p1ID, p2ID string
 	supportedInputFormats := []string{"gedcom", "json"}
+	supportedOutputFormats := []string{"", "json"}
 	out := alf.Command{
 		Description: "calculate, describe relationship between people",
 		Setup: func(p flag.FlagSet) *flag.FlagSet {
 			fullName := mainName + " " + name
 			flags := newFlagSet(fullName)
 			flags.StringVar(&inputFormat, "f", supportedInputFormats[0], fmt.Sprintf("input format, one of %q", supportedInputFormats))
+			flags.StringVar(&outputFormat, "output-format", supportedOutputFormats[0], fmt.Sprintf("output format, one of %q", supportedOutputFormats))
 			flags.StringVar(&p1ID, "p1", "", "id of person 1")
 			flags.StringVar(&p2ID, "p2", "", "id of person 2")
 
@@ -113,7 +113,15 @@ Examples:
 				return
 			}
 
-			err = writeJSON(os.Stdout, formatMutualRelationship(result))
+			mr := makeMutualRelationship(result)
+
+			switch outputFormat {
+			case supportedOutputFormats[1]:
+				err = writeJSON(os.Stdout, mr)
+			default:
+				err = formatMutualRelationship(os.Stdout, mr)
+			}
+
 			return
 		},
 	}
@@ -144,104 +152,8 @@ func choosePeopleToRelate(ctx context.Context, people []*entity.Person) (p1ID, p
 	return
 }
 
-type (
-	personIDChooser interface {
-		choosePersonID(ctx context.Context) (id string, err error)
-	}
-
-	fzfChooser struct {
-		bin        string
-		inputLines []string
-	}
-)
-
-var errNoFZF = errors.New("fzf binary not available")
-
-func newFZFChooser(ctx context.Context, people []*entity.Person) (personIDChooser, error) {
-	fzf := os.Getenv("FZF_BIN")
-	if len(fzf) == 0 {
-		fzf = "fzf"
-	}
-	pathToBin, err := exec.LookPath(fzf)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", errNoFZF, err)
-	}
-
-	inputLines := make([]string, len(people))
-	var inputLine []string
-	for i, person := range people {
-		// Set cap to maximum number of non-empty fields you might have (assuming 2 parents).
-		inputLine = make([]string, 0, 6)
-
-		if person.ID != "" {
-			inputLine = append(inputLine, "ID:"+person.ID)
-		}
-		inputLine = append(inputLine, "Name:"+person.Name.Full())
-		if d := formatDate(person.Birthdate); d != nil {
-			inputLine = append(inputLine, "Birth:"+*d)
-		}
-		if d := formatDate(person.Deathdate); d != nil {
-			inputLine = append(inputLine, "Death:"+*d)
-		}
-		for _, parent := range person.Parents {
-			inputLine = append(inputLine, "Parent:"+parent.Name.Full())
-		}
-
-		inputLines[i] = strings.Join(inputLine, "\t")
-	}
-
-	return &fzfChooser{bin: pathToBin, inputLines: inputLines}, nil
-}
-
-func (c *fzfChooser) choosePersonID(ctx context.Context) (out string, err error) {
-	// this part was adapted from https://github.com/junegunn/fzf/wiki/Language-bindings#go.
-	const fzfOptions = "--header 'pick person to compare (try fuzzy search)' --layout reverse --height 66% --info=inline --border --margin=1 --padding=1 --cycle"
-	shell := os.Getenv("SHELL")
-	if len(shell) == 0 {
-		shell = "sh"
-	}
-
-	cmd := exec.CommandContext(ctx, shell, "-c", c.bin+" "+fzfOptions)
-	cmd.Stderr = os.Stderr
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Error(ctx, nil, err, "stdin error")
-	}
-	go func() {
-		for _, line := range c.inputLines {
-			fmt.Fprintln(stdin, line)
-		}
-		if cerr := stdin.Close(); cerr != nil {
-			log.Error(ctx, nil, err, "could not close input pipe")
-		}
-	}()
-
-	var userChoice string
-	if result, rerr := cmd.Output(); rerr != nil {
-		err = rerr
-		return
-	} else {
-		before, after, found := strings.Cut(string(result), "\n")
-		log.Info(ctx, map[string]any{"before": before, "after": after, "found": found}, "")
-		userChoice = before
-	}
-
-	// parsing the user choice depends highly on the formatting done to the
-	// input line.
-	fields := strings.Fields(userChoice)
-	if len(fields) < 1 {
-		err = errors.New("it seems like an early exit")
-		return
-	}
-
-	fieldParts := strings.Split(fields[0], ":")
-	if len(fieldParts) < 2 {
-		err = fmt.Errorf("expected first field to have %q, field=%q", ":", fields[0])
-		return
-	}
-
-	out = fieldParts[1]
-	return
+type personIDChooser interface {
+	choosePersonID(ctx context.Context) (id string, err error)
 }
 
 func formatDate(in *entity.Date) *string {
@@ -253,58 +165,84 @@ func formatDate(in *entity.Date) *string {
 	return &out
 }
 
-func formatMutualRelationship(in entity.MutualRelationship) (out map[string]any) {
-	out = map[string]any{
-		"union":          nil,
-		"common_person":  nil,
-		"relationship_1": nil,
-		"relationship_2": nil,
+type (
+	mutualRelationship struct {
+		Person1       *groupSheetSimplePerson   `json:"person_1"`
+		Person2       *groupSheetSimplePerson   `json:"person_2"`
+		Union         []*groupSheetSimplePerson `json:"union"`
+		CommonPerson  *groupSheetSimplePerson   `json:"common_person"`
+		Relationship1 *relationship             `json:"relationship_1"`
+		Relationship2 *relationship             `json:"relationship_2"`
 	}
+	relationship struct {
+		Description        string                    `json:"description"`
+		Type               string                    `json:"type"`
+		GenerationsRemoved int                       `json:"generations_removed"`
+		Path               []*groupSheetSimplePerson `json:"path"`
+		SourceID           string                    `json:"source_id"`
+		TargetID           string                    `json:"target_id"`
+	}
+)
 
+func makeMutualRelationship(in entity.MutualRelationship) (out mutualRelationship) {
 	if in.CommonPerson != nil {
-		out["common_person"] = formatPerson(*in.CommonPerson)
+		out.CommonPerson = simplifyPerson(*in.CommonPerson)
 	}
 
 	if in.Union != nil {
-		var p1, p2 map[string]any
+		var p1, p2 *groupSheetSimplePerson
 		if in.Union.Person1 != nil {
-			p1 = formatPerson(*in.Union.Person1)
+			p1 = simplifyPerson(*in.Union.Person1)
 		}
 		if in.Union.Person2 != nil {
-			p2 = formatPerson(*in.Union.Person2)
+			p2 = simplifyPerson(*in.Union.Person2)
 		}
-		out["union"] = map[string]any{"person_1": p1, "person_2": p2}
+
+		out.Union = []*groupSheetSimplePerson{p1, p2}
 	}
 
 	type Tuple struct {
-		Dest string
-		Rel  entity.Relationship
+		Src        entity.Relationship
+		RelDest    **relationship
+		PersonDest **groupSheetSimplePerson
 	}
 
-	for _, tup := range []Tuple{{"relationship_1", in.R1}, {"relationship_2", in.R2}} {
-		path := make([]map[string]any, len(tup.Rel.Path))
-		for j, person := range tup.Rel.Path {
-			path[j] = formatPerson(person)
+	for _, tup := range []Tuple{{in.R1, &out.Relationship1, &out.Person1}, {in.R2, &out.Relationship2, &out.Person2}} {
+		path := make([]*groupSheetSimplePerson, len(tup.Src.Path))
+		for j, person := range tup.Src.Path {
+			path[j] = simplifyPerson(person)
+
+			if j == 0 {
+				*tup.PersonDest = simplifyPerson(person)
+			}
 		}
 
-		out[tup.Dest] = map[string]any{
-			"description":         tup.Rel.Description,
-			"type":                tup.Rel.Type.String(),
-			"generations_removed": tup.Rel.GenerationsRemoved,
-			"path":                path,
-			"source_id":           tup.Rel.SourceID,
-			"target_id":           tup.Rel.TargetID,
+		*tup.RelDest = &relationship{
+			Description:        tup.Src.Description,
+			Type:               tup.Src.Type.String(),
+			GenerationsRemoved: tup.Src.GenerationsRemoved,
+			Path:               path,
+			SourceID:           tup.Src.SourceID,
+			TargetID:           tup.Src.TargetID,
 		}
 	}
 
 	return
 }
 
-func formatPerson(p entity.Person) (out map[string]any) {
-	return map[string]any{
-		"id":         p.ID,
-		"name":       p.Name,
-		"birth_date": formatDate(p.Birthdate),
-		"death_date": formatDate(p.Deathdate),
+func simplifyPerson(p entity.Person) *groupSheetSimplePerson {
+	var birth, death groupSheetDate
+	if p.Birthdate != nil {
+		birth = groupSheetDate{Date: p.Birthdate.String()}
+	}
+	if p.Deathdate != nil {
+		death = groupSheetDate{Date: p.Deathdate.String()}
+	}
+	return &groupSheetSimplePerson{
+		ID:    p.ID,
+		Role:  "",
+		Name:  p.Name.Full(),
+		Birth: birth,
+		Death: death,
 	}
 }

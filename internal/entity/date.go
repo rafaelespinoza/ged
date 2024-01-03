@@ -37,9 +37,9 @@ func (d Date) String() string {
 		if d.Range.Lo != nil && d.Range.Hi != nil {
 			out = d.Range.Lo.Display + " ... " + d.Range.Hi.Display
 		} else if d.Range.Lo != nil {
-			out = d.Range.Lo.Display + " ..."
+			out = ">= " + d.Range.Lo.Display
 		} else if d.Range.Hi != nil {
-			out = "... " + d.Range.Hi.Display
+			out = "<= " + d.Range.Hi.Display
 		}
 	} else {
 		out = "?"

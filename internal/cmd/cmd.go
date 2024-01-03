@@ -36,9 +36,10 @@ func New() Root {
 	del := &alf.Delegator{
 		Description: "main command for " + mainName,
 		Subs: map[string]alf.Directive{
-			"draw":   makeDraw("draw"),
-			"parse":  makeParse("parse"),
-			"relate": makeRelate("relate"),
+			"draw":         makeDraw("draw"),
+			"parse":        makeParse("parse"),
+			"relate":       makeRelate("relate"),
+			"explore-data": makeExploreData("explore-data"),
 		},
 	}
 

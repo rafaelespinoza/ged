@@ -8,6 +8,7 @@ genealogical data tooling
 
 - Ingest [GEDCOM](https://gedcom.io) data, a defacto standard file format spec for genealogical data
 - Calculate relationships between family members via common ancestors
+- View, peruse records in the terminal
 - Draw a family tree from GEDCOM data
 - Structured, leveled logging messages written to standard error
 
@@ -18,7 +19,8 @@ Required tooling:
 - [just](https://just.systems), to streamline code building and other tasks
 
 Optional, but recommended tooling:
-- [fzf](https://github.com/junegunn/fzf), to enhance calculating relationship between people
+- [bkt](https://github.com/dimo414/bkt), to cache views when interactively exploring data
+- [fzf](https://github.com/junegunn/fzf), to enhance calculating relationships between people
 - [jq](https://jqlang.github.io/jq/manual), view parsed data as JSON
 
 The justfile defines the most common operations.
@@ -98,10 +100,10 @@ Calculate relationship between 2 people.
 
 If you have [fzf](https://github.com/junegunn/fzf) on your system, then use fuzzy search to select the people.
 ```sh
-$ bin/main relate < testdata/kennedy.ged
+$ ./explore-data.sh relate testdata/kennedy.ged
 ```
 
 If you don't have fzf or don't want to use it, specify the IDs of the people like so:
 ```sh
-$ bin/main relate -p1 @I111@ -p2 @I222@ < testdata/kennedy.ged
+$ bin/main relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged
 ```

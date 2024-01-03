@@ -27,6 +27,26 @@ type PersonalName struct {
 	SurnamePrefix string // URI is g7:SPFX
 	Surname       string // URI is g7:SURN
 	NameSuffix    string // URI is g7:NSFX
+
+	name *string
+}
+
+func (n *PersonalName) String() string {
+	if n.name != nil {
+		return *n.name
+	}
+
+	allParts := []string{n.NamePrefix, n.Given, n.Nickname, n.SurnamePrefix, n.Surname, n.NameSuffix}
+	nonEmptyParts := make([]string, 0, len(allParts))
+	for _, part := range allParts {
+		if part != "" {
+			nonEmptyParts = append(nonEmptyParts, part)
+		}
+	}
+
+	out := strings.Join(nonEmptyParts, " ")
+	n.name = &out
+	return *n.name
 }
 
 var surnamePattern = regexp.MustCompile(`(\/[A-z|\s]*\/)`)
