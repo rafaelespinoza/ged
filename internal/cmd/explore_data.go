@@ -50,6 +50,7 @@ type (
 	}
 	groupSheetFamily struct {
 		ID         string
+		Title      string
 		MarriedAt  groupSheetDate
 		DivorcedAt groupSheetDate
 		Parents    []*groupSheetSimplePerson

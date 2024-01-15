@@ -155,6 +155,7 @@ func buildGroupSheetFamily(famID string, peopleByID map[string]*gedcom.Individua
 		return
 	}
 
+	parentSurnames := make([]string, len(fam.ParentXrefs))
 	parents := make([]*groupSheetSimplePerson, len(fam.ParentXrefs))
 	for j, parentID := range fam.ParentXrefs {
 		individual, ok := peopleByID[parentID]
@@ -164,6 +165,9 @@ func buildGroupSheetFamily(famID string, peopleByID map[string]*gedcom.Individua
 		}
 		parents[j] = buildGroupSheetPerson(individual)
 		parents[j].Role = "parent"
+		if len(individual.Names) > 0 {
+			parentSurnames[j] = individual.Names[0].Surname
+		}
 	}
 
 	children := make([]*groupSheetSimplePerson, 0, len(fam.ChildXrefs))
@@ -179,6 +183,7 @@ func buildGroupSheetFamily(famID string, peopleByID map[string]*gedcom.Individua
 
 	out = groupSheetFamily{
 		ID:         famID,
+		Title:      "The " + strings.Join(parentSurnames, " ") + " family",
 		MarriedAt:  buildGroupSheetDate(fam.MarriedAt),
 		DivorcedAt: buildGroupSheetDate(fam.DivorcedAt),
 		Parents:    parents,

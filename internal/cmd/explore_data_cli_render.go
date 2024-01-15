@@ -9,35 +9,46 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/muesli/termenv"
 	"github.com/rafaelespinoza/ged/internal/log"
 )
 
+// Common style definitions. If you're going use a Style modifier method (ie:
+// Width(), Margin()), then be sure to first call Copy(). Otherwise, you may
+// notice unintended side effects for other uses of these base styles.
 var (
-	styleBox           = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true).Padding(0, 2)
-	styleBold          = lipgloss.NewStyle().Bold(true)
+	styleBox           = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).Padding(0, 2)
+	styleBold          = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
 	styleBoldUnderline = lipgloss.NewStyle().Bold(true).Underline(true)
 	styleTableHeader   = lipgloss.NewStyle().Bold(true).Underline(true).Align(lipgloss.Left).Padding(0, 1)
 	styleTableRow      = lipgloss.NewStyle().Padding(0, 1)
-	styleFaint         = lipgloss.NewStyle().Align(lipgloss.Left).Faint(true)
+	styleFaint         = lipgloss.NewStyle().Faint(true)
 )
 
+func init() {
+	// Ensure retention of basic styling; even when the output isn't directly
+	// connected to a terminal.
+	lipgloss.SetColorProfile(termenv.ANSI)
+}
+
 func renderGroupSheetView(w io.Writer, in *groupSheetView) error {
+	headerStyles := styleBoldUnderline.Copy().MarginBottom(1)
 	var personView, familiesAsChild, familiesAsPartner strings.Builder
 	{
-		personView.WriteString(styleBold.Render("person") + "\n")
+		personView.WriteString(headerStyles.Render("person") + "\n")
 		personView.WriteString(tableizeGroupSheetPeople([]string{"id", "name", "birth_date", "birth_place", "death_date", "death_place"}, in.Person) + "\n")
 		for _, note := range in.Notes {
-			personView.WriteString(styleFaint.Width(80).Render(note) + "\n")
+			personView.WriteString(styleFaint.Copy().Width(80).Render(note) + "\n")
 		}
 	}
 
-	familiesAsChild.WriteString(styleBold.Render("families as child") + "\n")
+	familiesAsChild.WriteString(headerStyles.Render("families as child") + "\n")
 	for _, fam := range in.FamiliesAsChild {
-		familiesAsChild.WriteString(styleBox.Render(buildFamilyComponent(fam)) + "\n")
+		familiesAsChild.WriteString(buildFamilyComponent(fam) + "\n")
 	}
-	familiesAsPartner.WriteString(styleBold.Render("families as partner") + "\n")
+	familiesAsPartner.WriteString(headerStyles.Render("families as partner") + "\n")
 	for _, fam := range in.FamiliesAsPartner {
-		familiesAsPartner.WriteString(styleBox.Render(buildFamilyComponent(fam)) + "\n")
+		familiesAsPartner.WriteString(buildFamilyComponent(fam) + "\n")
 	}
 
 	_, err := fmt.Fprintln(w, lipgloss.JoinVertical(lipgloss.Center, personView.String(), familiesAsChild.String(), familiesAsPartner.String()))
@@ -45,16 +56,19 @@ func renderGroupSheetView(w io.Writer, in *groupSheetView) error {
 }
 
 func buildFamilyComponent(fam groupSheetFamily) string {
-	parts := make([]string, 0, 3)
+	parts := make([]string, 0, 4)
 	// unlike most other string building functionality here, this func doesn't
 	// need to manually add the \n at the end of each part because that's
 	// already taken care of by func lipgloss.JoinVertical
 
+	if fam.Title != "" {
+		parts = append(parts, fam.Title)
+	}
 	if fam.MarriedAt.Date != "" {
-		parts = append(parts, "parents married on: "+fam.MarriedAt.Date)
+		parts = append(parts, styleFaint.Render("parents married on: "+fam.MarriedAt.Date))
 	}
 	if fam.DivorcedAt.Date != "" {
-		parts = append(parts, "parents divorced on: "+fam.DivorcedAt.Date)
+		parts = append(parts, styleFaint.Render("parents divorced on: "+fam.DivorcedAt.Date))
 	}
 	people := append(fam.Parents, fam.Children...)
 	if len(people) > 0 {
@@ -62,7 +76,7 @@ func buildFamilyComponent(fam groupSheetFamily) string {
 		parts = append(parts, tableizeGroupSheetPeople(columns, people...))
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Top, slices.Clip(parts)...)
+	return lipgloss.JoinVertical(lipgloss.Center, slices.Clip(parts)...)
 }
 
 func renderMutualRelationship(w io.Writer, in mutualRelationship) error {
@@ -71,22 +85,22 @@ func renderMutualRelationship(w io.Writer, in mutualRelationship) error {
 	{
 		// Build a card-like component for each relationship compared and put
 		// them side-by-side.
+		d1 := in.Person1.Name + " is the " + styleBold.Render(in.Relationship1.Description) + " of " + in.Person2.Name
+		d2 := in.Person2.Name + " is the " + styleBold.Render(in.Relationship2.Description) + " of " + in.Person1.Name
+
 		p1 := buildPersonVertically(in.Person1)
 		p2 := buildPersonVertically(in.Person2)
-		r1 := buildRelationshipComponent("relationship_1: from person_1 to person_2", p1, p2, in.Relationship1)
-		r2 := buildRelationshipComponent("relationship_2: from person_2 to person_1", p2, p1, in.Relationship2)
 
-		relationships.WriteString(
-			styleBold.Align(lipgloss.Center).Render("relationships") + "\n",
-		)
+		r1 := buildRelationshipComponent(d1, p1, p2, in.Relationship1)
+		r2 := buildRelationshipComponent(d2, p2, p1, in.Relationship2)
+
+		relationships.WriteString(styleBold.Render("relationships") + "\n")
 		relationships.WriteString(
 			styleFaint.Render(`How is person 1 related to person 2?
 Describe the relationship, and enumerate the path to a common ancestor or union.
 Also show the inverse: from person 2 to person 1.`) + "\n",
 		)
-		relationships.WriteString(
-			lipgloss.JoinHorizontal(lipgloss.Top, styleBox.Render(r1), styleBox.Render(r2)) + "\n",
-		)
+		relationships.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, styleBox.Render(r1), styleBox.Render(r2)) + "\n")
 	}
 
 	{
@@ -96,19 +110,19 @@ Also show the inverse: from person 2 to person 1.`) + "\n",
 		columns := []string{"name", "birth_date", "birth_place", "death_date", "death_place"}
 		if in.CommonPerson != nil {
 			var b strings.Builder
-			b.WriteString(styleBold.Align(lipgloss.Center).Render("common ancestor") + "\n")
+			b.WriteString(styleBold.Render("common ancestor") + "\n")
 			b.WriteString(tableizeGroupSheetPeople(columns, in.CommonPerson) + "\n")
 			common = append(common, b.String())
 		}
 		if len(in.Union) > 0 {
 			var b strings.Builder
-			b.WriteString(styleBold.Align(lipgloss.Center).Render("union") + "\n")
+			b.WriteString(styleBold.Render("union") + "\n")
 			b.WriteString(tableizeGroupSheetPeople(columns, in.Union...) + "\n")
 			common = append(common, b.String())
 		}
 
 		commonEntities.WriteString(
-			styleBold.Align(lipgloss.Center).Render("common entities") + "\n",
+			styleBold.Render("common entities") + "\n",
 		)
 		commonEntities.WriteString(
 			styleFaint.Render(`If the people are related by blood, who is their common ancestor?
@@ -126,7 +140,7 @@ If related by law, through which union?`) + "\n",
 // buildPersonVertically formats the person fields in a vertical orientation. It
 // ensures that the field names and values are aligned in a tabular fashion.
 func buildPersonVertically(in *groupSheetSimplePerson) string {
-	headerStyles := styleBoldUnderline.MarginRight(2)
+	headerStyles := styleBoldUnderline.Copy().MarginRight(2)
 	var columnNames, columnValues strings.Builder
 	columns := []struct{ Key, Val string }{
 		{"name", in.Name},
@@ -150,15 +164,15 @@ func buildPersonVertically(in *groupSheetSimplePerson) string {
 		lipgloss.JoinVertical(lipgloss.Left, columnNames.String()),
 		lipgloss.JoinVertical(lipgloss.Left, columnValues.String()),
 	)
-	return styleBox.Render(out)
+	return styleBox.Copy().BorderForeground(lipgloss.ANSIColor(termenv.ANSIBrightBlack)).Render(out)
 }
 
-func buildRelationshipComponent(title, p1, p2 string, rel *relationship) string {
+func buildRelationshipComponent(desc, p1, p2 string, rel *relationship) string {
 	return lipgloss.JoinVertical(
 		lipgloss.Center,
-		styleBold.MarginBottom(1).Render(title),
-		rel.Description,
+		desc,
 		lipgloss.JoinHorizontal(lipgloss.Top, p1, p2),
+		"path to common entity",
 		tableizeGroupSheetPeople([]string{"name", "birth_date", "birth_place", "death_date", "death_place"}, rel.Path...),
 	)
 }
@@ -171,7 +185,9 @@ func tableizeGroupSheetPeople(columnNames []string, people ...*groupSheetSimpleP
 				return styleTableHeader
 			}
 			return styleTableRow
-		})
+		}).
+		BorderRow(true).
+		BorderStyle(styleFaint)
 	for _, p := range people {
 		values := make([]string, len(columnNames))
 		var value string
