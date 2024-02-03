@@ -76,7 +76,7 @@ $ bin/main explore-data relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged" | fold
 	# shellcheck disable=SC2016
 	local fzf_preview='${GED_BIN:?missing GED_BIN} -q explore-data show --target-id "$(echo {1})" <"${INFILE:?missing INFILE}"'
 	if command -v bkt >&/dev/null; then
-		fzf_preview="bkt -- ${fzf_preview}"
+		fzf_preview="bkt --ttl 60s -- ${fzf_preview}"
 	else
 		echo >&2 "${no_bkt_msg}"
 	fi
@@ -124,7 +124,7 @@ $ bin/main explore-data show --target-id @I10@ < testdata/kennedy.ged" | fold -s
 	# shellcheck disable=SC2016
 	local fzf_preview='${GED_BIN:?missing GED_BIN} -q explore-data show --target-id "$(echo {1})" <"${INFILE:?missing INFILE}"'
 	if command -v bkt >&/dev/null; then
-		fzf_preview="bkt -- ${fzf_preview}"
+		fzf_preview="bkt --ttl 60s -- ${fzf_preview}"
 	else
 		echo >&2 "${no_bkt_msg}"
 	fi
