@@ -15,13 +15,16 @@ import (
 	"sync"
 )
 
-var theLogger *slog.Logger
+var (
+	theLogger  *slog.Logger
+	initLogger sync.Once
+)
 
 // Init sets up a singleton logger just once. Subsequent invocations after the
 // first invocation are pretty much no ops, If h is empty, then it effectively
 // shuts off logging.
 func Init(h slog.Handler) {
-	f := sync.OnceFunc(func() {
+	initLogger.Do(func() {
 		if h == nil {
 			// this value should be greater than the highest value provided by the standard library
 			level := slog.LevelError + 1
@@ -31,8 +34,6 @@ func Init(h slog.Handler) {
 		theLogger = slog.New(h)
 		theLogger.Debug("initialized logger")
 	})
-
-	f()
 }
 
 func Debug(ctx context.Context, fields map[string]any, msg string) {

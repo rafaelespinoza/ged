@@ -25,7 +25,7 @@ function _run_fzf() {
 	# in looking up the data.
 	local -r with_nth='2..'
 
-	# Prefer search results where the principle person's name, rather than the name of a parent, is
+	# Prefer search results where the principal person's name, rather than the name of a parent, is
 	# a match.
 	local -r tiebreak=begin
 
