@@ -124,6 +124,14 @@ func TestReadRecordsFields(t *testing.T) {
 2 DATE 1 JAN 1970
 1 DEAT
 2 DATE 19 JAN 2038
+1 BURI
+2 DATE 13 DEC 1901
+2 PLAC The internet
+1 EVEN
+2 TYPE OOF
+2 DATE 13 MAY 2006
+2 PLAC AOL
+2 NOTE According to the Wikipedia article on the Year 2038 Problem, AOL had a bug related to 2038-01-19.
 1 FAMS @F1@
 0 @I2@ INDI
 1 NAME Charlene /Foxtrot/
@@ -133,6 +141,11 @@ func TestReadRecordsFields(t *testing.T) {
 2 SURN Foxtrot
 1 BIRT
 2 DATE 1 JAN 1970
+1 CHR
+2 DATE 2 JAN 1970
+1 NATU
+2 DATE 9 SEP 1999
+3 _APID 1,1629::6961470
 1 DEAT
 2 DATE 1 JAN 2022
 1 FAMS @F1@
@@ -144,6 +157,13 @@ func TestReadRecordsFields(t *testing.T) {
 2 SURN Foxtrot
 1 BIRT
 2 DATE 12 JUN 1995
+1 BAPM
+2 DATE 13 JUN 1995
+2 PLAC The media
+1 RESI
+2 DATE BETWEEN 1996 AND 2000
+2 PLAC The mainstream media
+3 _APID 1,6061::66023688
 1 DEAT
 2 DATE 1 JAN 2000
 1 NOTE The year 2000 problem, also commonly known as the Y2K problem, Y2K scare, millennium bug, Y2K bug, Y2K glitch, Y2K error, or simply Y2K,
@@ -229,8 +249,17 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Charlie /Foxtrot/", Given: "Charlie", Nickname: "Chuck", Surname: "Foxtrot"},
 				},
-				Birth:             []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01")}},
-				Death:             []*gedcom.Event{{Date: mustParseDate(t, "2038-01-19")}},
+				Birth:  []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01"), Type: "Birth"}},
+				Death:  []*gedcom.Event{{Date: mustParseDate(t, "2038-01-19"), Type: "Death"}},
+				Burial: []*gedcom.Event{{Date: mustParseDate(t, "1901-12-13"), Place: "The internet", Type: "Burial"}},
+				Events: []*gedcom.Event{
+					{
+						Type:  "OOF",
+						Date:  mustParseDate(t, "2006-05-13"),
+						Place: "AOL",
+						Notes: []*gedcom.Note{{Payload: "According to the Wikipedia article on the Year 2038 Problem, AOL had a bug related to 2038-01-19."}},
+					},
+				},
 				FamiliesAsPartner: []string{"@F1@"},
 			},
 			{
@@ -238,8 +267,10 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Charlene /Foxtrot/", Given: "Charlene", Nickname: "Y2K22", Surname: "Foxtrot"},
 				},
-				Birth:             []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01")}},
-				Death:             []*gedcom.Event{{Date: mustParseDate(t, "2022-01-01")}},
+				Birth:             []*gedcom.Event{{Date: mustParseDate(t, "1970-01-01"), Type: "Birth"}},
+				Christening:       []*gedcom.Event{{Date: mustParseDate(t, "1970-01-02"), Type: "Christening"}},
+				Naturalizations:   []*gedcom.Event{{Date: mustParseDate(t, "1999-09-09"), Type: "Naturalization"}},
+				Death:             []*gedcom.Event{{Date: mustParseDate(t, "2022-01-01"), Type: "Death"}},
 				FamiliesAsPartner: []string{"@F1@"},
 			},
 			{
@@ -247,8 +278,10 @@ func TestReadRecordsFields(t *testing.T) {
 				Names: []gedcom.PersonalName{
 					{Payload: "Mike /Foxtrot/", Given: "Mike", Nickname: "Millennium Bug", Surname: "Foxtrot"},
 				},
-				Birth: []*gedcom.Event{{Date: mustParseDate(t, "1995-06-12")}},
-				Death: []*gedcom.Event{{Date: mustParseDate(t, "2000-01-01")}},
+				Birth:      []*gedcom.Event{{Date: mustParseDate(t, "1995-06-12"), Type: "Birth"}},
+				Baptism:    []*gedcom.Event{{Date: mustParseDate(t, "1995-06-13"), Place: "The media", Type: "Baptism"}},
+				Residences: []*gedcom.Event{{DateRange: &date.Range{Lo: &date.Date{Year: 1996}, Hi: &date.Date{Year: 2000}}, Place: "The mainstream media", Type: "Residence"}},
+				Death:      []*gedcom.Event{{Date: mustParseDate(t, "2000-01-01"), Type: "Death"}},
 				Notes: []*gedcom.Note{
 					{Payload: `The year 2000 problem, also commonly known as the Y2K problem, Y2K scare, millennium bug, Y2K bug, Y2K glitch, Y2K error, or simply Y2K,
 refers to potential computer errors related to the formatting and storage of calendar data for dates in and after the year 2000.`,
@@ -278,6 +311,14 @@ refers to potential computer errors related to the formatting and storage of cal
 				}
 			}
 
+			testEvents(t, errMsgPrefix+".Birth", got.Birth, exp.Birth)
+			testEvents(t, errMsgPrefix+".Baptism", got.Baptism, exp.Baptism)
+			testEvents(t, errMsgPrefix+".Christening", got.Christening, exp.Christening)
+			testEvents(t, errMsgPrefix+".Residences", got.Residences, exp.Residences)
+			testEvents(t, errMsgPrefix+".Naturalizations", got.Naturalizations, exp.Naturalizations)
+			testEvents(t, errMsgPrefix+".Death", got.Death, exp.Death)
+			testEvents(t, errMsgPrefix+".Burial", got.Burial, exp.Burial)
+			testEvents(t, errMsgPrefix+".Events", got.Events, exp.Events)
 			cmpStringSlices(t, errMsgPrefix+".FamiliesAsPartner", got.FamiliesAsPartner, exp.FamiliesAsPartner)
 			cmpStringSlices(t, errMsgPrefix+".FamiliesAsChild", got.FamiliesAsChild, exp.FamiliesAsChild)
 			testNotes(t, errMsgPrefix+".Notes", got.Notes, exp.Notes)
@@ -418,7 +459,84 @@ func cmpStringMaps(t *testing.T, errMsgPrefix string, actual, expected map[strin
 	}
 }
 
+func testEvents(t *testing.T, errMsgPrefix string, actual, expected []*gedcom.Event) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("%s; wrong length; got %d, exp %d", errMsgPrefix, len(actual), len(expected))
+	} else {
+		for i, got := range actual {
+			errMsgPrefix := fmt.Sprintf("%s[%d]", errMsgPrefix, i)
+			exp := expected[i]
+
+			if got.Type != exp.Type {
+				t.Errorf("%s; wrong Type, got %q, exp %q", errMsgPrefix, got.Type, exp.Type)
+			}
+
+			testDate(t, errMsgPrefix+".Date", got.Date, exp.Date)
+			testDateRange(t, errMsgPrefix+".DateRange", got.DateRange, exp.DateRange)
+
+			if got.Place != exp.Place {
+				t.Errorf("%s; wrong Place, got %q, exp %q", errMsgPrefix, got.Place, exp.Place)
+			}
+
+			if len(got.SourceCitations) != len(exp.SourceCitations) {
+				t.Errorf("%s; wrong number of SourceCitations; got %d, exp %d", errMsgPrefix, len(got.SourceCitations), len(exp.SourceCitations))
+			} else {
+				for j, got := range got.SourceCitations {
+					errMsgPrefix := fmt.Sprintf("%s[%d], ", errMsgPrefix, j)
+					cmpSourceCitation(t, errMsgPrefix, got, exp.SourceCitations[j])
+				}
+			}
+			testNotes(t, errMsgPrefix+".Notes", got.Notes, exp.Notes)
+		}
+	}
+}
+
+func testDate(t *testing.T, errMsgPrefix string, actual, expected *date.Date) {
+	t.Helper()
+
+	if actual == nil && expected == nil {
+		return
+	} else if actual != nil && expected == nil {
+		t.Errorf("%s; got non-empty value, but expected %v", errMsgPrefix, expected)
+		return
+	} else if actual == nil && expected != nil {
+		t.Errorf("%s; expected non-empty value, but got %v", errMsgPrefix, actual)
+		return
+	}
+
+	if actual.Year != expected.Year {
+		t.Errorf("%s; wrong Year, got %d, exp %d", errMsgPrefix, actual.Year, expected.Year)
+	}
+	if actual.Month != expected.Month {
+		t.Errorf("%s; wrong Month, got %d, exp %d", errMsgPrefix, actual.Month, expected.Month)
+	}
+	if actual.Day != expected.Day {
+		t.Errorf("%s; wrong Day, got %d, exp %d", errMsgPrefix, actual.Day, expected.Day)
+	}
+}
+
+func testDateRange(t *testing.T, errMsgPrefix string, actual, expected *date.Range) {
+	t.Helper()
+
+	if actual == nil && expected == nil {
+		return
+	} else if actual != nil && expected == nil {
+		t.Errorf("%s; got non-empty value, but expected %v", errMsgPrefix, expected)
+		return
+	} else if actual == nil && expected != nil {
+		t.Errorf("%s; expected non-empty value, but got %v", errMsgPrefix, actual)
+		return
+	}
+
+	testDate(t, errMsgPrefix+".Lo", actual.Lo, expected.Lo)
+	testDate(t, errMsgPrefix+".Hi", actual.Hi, expected.Hi)
+}
+
 func testNotes(t *testing.T, errMsgPrefix string, actual, expected []*gedcom.Note) {
+	t.Helper()
+
 	if len(actual) != len(expected) {
 		t.Errorf("%s; wrong length; got %d, exp %d", errMsgPrefix, len(actual), len(expected))
 	} else {

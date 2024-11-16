@@ -18,6 +18,10 @@ import (
 // marriage in a family). See the GEDCOM7 spec for info on Individual Events and
 // Family Events.
 type Event struct {
+	// Type describes life events that don't have their own GEDCOM tag. If the
+	// event already has a dedicated tag, such as a Birth (tag BIRT) or a Death
+	// (tag DEAT), then this field may be empty.
+	Type            string
 	Date            *date.Date
 	DateRange       *date.Range
 	Place           string
@@ -74,10 +78,21 @@ func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node
 				return nil, fmt.Errorf("error parsing note: %w", err)
 			}
 			out.Notes = append(out.Notes, note)
+		case "TYPE":
+			out.Type = subline.Payload
 		default:
 			log.Warn(ctx, fields, "unsupported Tag")
 		}
 	}
 
 	return
+}
+
+// setTypeIfEmpty respects any pre-existing value on the Type field by not
+// setting anything. Otherwise, set Type to t.
+func (e *Event) setTypeIfEmpty(t string) {
+	if e.Type != "" {
+		return
+	}
+	e.Type = t
 }

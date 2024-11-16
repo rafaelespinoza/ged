@@ -33,7 +33,7 @@ func init() {
 
 func renderGroupSheetView(w io.Writer, in *groupSheetView) error {
 	headerStyles := styleBoldUnderline.Copy().MarginBottom(1)
-	var personView, familiesAsChild, familiesAsPartner strings.Builder
+	var personView, familiesAsChild, familiesAsPartner, events strings.Builder
 	{
 		personView.WriteString(headerStyles.Render("person") + "\n")
 		personView.WriteString(tableizeGroupSheetPeople([]string{"id", "name", "birth_date", "birth_place", "death_date", "death_place"}, in.Person) + "\n")
@@ -51,7 +51,12 @@ func renderGroupSheetView(w io.Writer, in *groupSheetView) error {
 		familiesAsPartner.WriteString(buildFamilyComponent(fam) + "\n")
 	}
 
-	_, err := fmt.Fprintln(w, lipgloss.JoinVertical(lipgloss.Center, personView.String(), familiesAsChild.String(), familiesAsPartner.String()))
+	events.WriteString(headerStyles.Render("events") + "\n")
+	if len(in.Events) > 0 {
+		events.WriteString(listEvents(in.Events))
+	}
+
+	_, err := fmt.Fprintln(w, lipgloss.JoinVertical(lipgloss.Center, personView.String(), familiesAsChild.String(), familiesAsPartner.String(), events.String()))
 	return err
 }
 
@@ -180,12 +185,7 @@ func buildRelationshipComponent(desc, p1, p2 string, rel *relationship) string {
 func tableizeGroupSheetPeople(columnNames []string, people ...*groupSheetSimplePerson) string {
 	table := table.New().
 		Headers(columnNames...).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			if row == 0 {
-				return styleTableHeader
-			}
-			return styleTableRow
-		}).
+		StyleFunc(getTableRowStyle).
 		BorderRow(true).
 		BorderStyle(styleFaint)
 	for _, p := range people {
@@ -216,4 +216,32 @@ func tableizeGroupSheetPeople(columnNames []string, people ...*groupSheetSimpleP
 	}
 
 	return table.Render()
+}
+
+func listEvents(in []*groupSheetEvent) string {
+	out := table.New().
+		Headers("date", "place", "type", "notes").
+		StyleFunc(getTableRowStyle).
+		BorderRow(true).
+		BorderStyle(styleFaint)
+
+	wrappingStyle := styleTableRow.Copy().Width(40)
+
+	for _, ev := range in {
+		out = out.Row(
+			ev.Date.Date,
+			wrappingStyle.Render(ev.Date.Place),
+			ev.Type,
+			wrappingStyle.Render(strings.Join(ev.Notes, "\n")),
+		)
+	}
+	return out.Render()
+}
+
+func getTableRowStyle(row, col int) lipgloss.Style {
+	if row == 0 {
+		return styleTableHeader
+	}
+
+	return styleTableRow
 }

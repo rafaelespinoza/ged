@@ -95,6 +95,7 @@ func buildGroupSheetView(in viewGroupSheetInputs) (*groupSheetView, error) {
 	out.Notes = make([]string, len(target.Notes))
 	out.FamiliesAsChild = make([]groupSheetFamily, len(target.FamiliesAsChild))
 	out.FamiliesAsPartner = make([]groupSheetFamily, len(target.FamiliesAsPartner))
+	out.Events = buildGroupSheetEvents(target.EventLog())
 
 	for i, note := range target.Notes {
 		out.Notes[i] = note.Payload
@@ -190,5 +191,25 @@ func buildGroupSheetFamily(famID string, peopleByID map[string]*gedcom.Individua
 		Children:   slices.Clip(children),
 	}
 
+	return
+}
+
+func buildNotes(in []*gedcom.Note) (out []string) {
+	out = make([]string, len(in))
+	for i, note := range in {
+		out[i] = note.Payload
+	}
+	return
+}
+
+func buildGroupSheetEvents(in []*gedcom.Event) (out []*groupSheetEvent) {
+	out = make([]*groupSheetEvent, len(in))
+	for i, ev := range in {
+		out[i] = &groupSheetEvent{
+			Date:  buildGroupSheetDate(ev),
+			Type:  ev.Type,
+			Notes: buildNotes(ev.Notes),
+		}
+	}
 	return
 }

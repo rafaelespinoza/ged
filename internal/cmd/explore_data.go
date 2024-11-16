@@ -40,6 +40,7 @@ type (
 		Notes             []string
 		FamiliesAsChild   []groupSheetFamily
 		FamiliesAsPartner []groupSheetFamily
+		Events            []*groupSheetEvent
 	}
 	groupSheetSimplePerson struct {
 		ID    string
@@ -55,6 +56,11 @@ type (
 		DivorcedAt groupSheetDate
 		Parents    []*groupSheetSimplePerson
 		Children   []*groupSheetSimplePerson
+	}
+	groupSheetEvent struct {
+		Date  groupSheetDate
+		Type  string
+		Notes []string
 	}
 	groupSheetDate struct {
 		Date  string

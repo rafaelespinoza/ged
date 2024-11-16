@@ -135,3 +135,29 @@ func testDate(t *testing.T, got, exp *date.Date) {
 		t.Errorf("wrong Display; got %q, expected %q", got.Display, exp.Display)
 	}
 }
+
+func mustParseDate(t *testing.T, in string) (out *date.Date) {
+	t.Helper()
+
+	out, rng, err := date.Parse(in)
+	if err != nil {
+		t.Fatalf("bad input %q: %v", in, err)
+	} else if rng != nil {
+		t.Fatalf("input %q appears to be a *Range, not a *Date", in)
+	}
+
+	return
+}
+
+func mustParseRange(t *testing.T, in string) (out *date.Range) {
+	t.Helper()
+
+	dat, out, err := date.Parse(in)
+	if err != nil {
+		t.Fatalf("bad input %q: %v", in, err)
+	} else if dat != nil {
+		t.Fatalf("input %q appears to be a *Date, not a *Range", in)
+	}
+
+	return
+}
