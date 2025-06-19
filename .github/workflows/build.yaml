@@ -2,16 +2,28 @@ name: build
 on: [push, pull_request]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # As of 2025-06, the github ubuntu runner image for ubuntu-latest is Ubuntu
+    # v24. There is a restriction on the installed Chrome sandbox that prevents
+    # the Mermaid-related unit tests in this repo from running properly. For
+    # now, just do what the tests, which also run in Github Actions, do for the
+    # upstream repo: https://github.com/dreampuf/mermaid.go. Here's an example
+    # error message:
+    #
+    #   draw_test.go:186: chrome failed to start:
+    #   [7114:7114:0619/205357.037986:FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:132] No usable sandbox! If you are running on Ubuntu 23.10+ or another Linux distro that has disabled unprivileged user namespaces with AppArmor, see https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md. Otherwise see https://chromium.googlesource.com/chromium/src/+/main/docs/linux/suid_sandbox_development.md for more information on developing with the (older) SUID sandbox. If you want to live dangerously and need an immediate workaround, you can try using --no-sandbox.
+    #
+    # There's also a stack trace but I'm omitting it because I wouldn't be able
+    # to understand it anyways.
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
     - name: Setup go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: 1.21
     - name: Install just
-      uses: extractions/setup-just@v1
+      uses: extractions/setup-just@v3
     - name: Setup module dependencies
       run: just mod
     - name: Compile binary
