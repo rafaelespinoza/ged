@@ -1,6 +1,6 @@
 module github.com/rafaelespinoza/ged
 
-go 1.21.3
+go 1.22
 
 require (
 	github.com/charmbracelet/lipgloss v0.9.1
@@ -8,6 +8,7 @@ require (
 	github.com/funwithbots/go-gedcom v0.1.2
 	github.com/muesli/termenv v0.15.2
 	github.com/rafaelespinoza/alf v0.2.0
+	github.com/rafaelespinoza/logg v0.1.1
 )
 
 require (

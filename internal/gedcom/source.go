@@ -3,12 +3,13 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // A SourceCitation supports claims made in a superstructure. Its URI is g7:SOUR.
@@ -27,19 +28,14 @@ func parseSourceCitation(ctx context.Context, line *gedcom7.Line, subnodes []*ge
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseSourceCitation"))
+
 	for _, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseSourceCitation",
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line", slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text))
 
 		switch subline.Tag {
 		case "PAGE":
@@ -61,7 +57,7 @@ func parseSourceCitation(ctx context.Context, line *gedcom7.Line, subnodes []*ge
 			}
 			out.Notes = append(out.Notes, note)
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", subline.Tag))
 		}
 	}
 

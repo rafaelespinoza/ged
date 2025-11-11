@@ -7,11 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"slices"
 
 	"github.com/rafaelespinoza/alf"
-	"github.com/rafaelespinoza/ged/internal/log"
 	"github.com/rafaelespinoza/ged/internal/srv"
 )
 
@@ -151,7 +151,7 @@ func renderMermaidFlowchart(ctx context.Context, r io.Reader, w io.Writer, rende
 
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
-			log.Error(ctx, nil, cerr, "failed to close mermaid")
+			slog.Error("failed to close mermaid", slog.Any("error", cerr))
 		}
 	}()
 

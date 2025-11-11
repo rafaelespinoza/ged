@@ -44,6 +44,8 @@ github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhA
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
 github.com/rafaelespinoza/alf v0.2.0 h1:Ec6XO3omGpneic0GHZB4vBsT/RopzUoca2Vi/Dn+4ZA=
 github.com/rafaelespinoza/alf v0.2.0/go.mod h1:e+DkMzlAa4KONZ2CPAxL7jnh67++BDXl9kEdMOef5rM=
+github.com/rafaelespinoza/logg v0.1.1 h1:rVF9Z3mcadixzRG53gXtJAj/+wmwgNZwW/7dBYec6ag=
+github.com/rafaelespinoza/logg v0.1.1/go.mod h1:a+Er8d9LXAlPieg2lWMU2zDaOUG1RutHMknpTytL6MI=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=

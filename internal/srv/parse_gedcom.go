@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"slices"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/gedcom"
-	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 func ParseGedcom(ctx context.Context, r io.Reader) ([]*entity.Person, []*entity.Union, error) {
@@ -17,7 +17,7 @@ func ParseGedcom(ctx context.Context, r io.Reader) ([]*entity.Person, []*entity.
 		return nil, nil, err
 	}
 
-	log.Info(ctx, map[string]any{"records": records}, "converted gedcom records")
+	slog.Info("converted gedcom records", slog.Any("records", records))
 
 	gedcomFamiliesByID := make(map[string]*gedcom.FamilyRecord, len(records.Families))
 	for _, family := range records.Families {
@@ -71,7 +71,7 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 		if len(individual.Birth) > 0 && individual.Birth[0] != nil {
 			birthdate, err = entity.NewDate(individual.Birth[0].Date, individual.Birth[0].DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Birth")
+				slog.Error("invalid Birth", slog.Any("error", err), slog.Any("individual", individual))
 				return nil, err
 			}
 		}
@@ -79,7 +79,7 @@ func convertGedcomPeople(ctx context.Context, records []*gedcom.IndividualRecord
 		if len(individual.Death) > 0 && individual.Death[0] != nil {
 			deathdate, err = entity.NewDate(individual.Death[0].Date, individual.Death[0].DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"individual": individual}, err, "invalid Death.Date")
+				slog.Error("invalid Death.Date", slog.Any("error", err), slog.Any("individual", individual))
 				return nil, err
 			}
 		}
@@ -162,21 +162,21 @@ func convertGedcomFamilies(ctx context.Context, records []*gedcom.FamilyRecord, 
 		if family.MarriedAt != nil {
 			union.StartDate, err = entity.NewDate(family.MarriedAt.Date, family.MarriedAt.DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"family": family}, err, "invalid StartDate")
+				slog.Error("invalid MarriedAt date", slog.Any("error", err), slog.Any("family", family))
 				return nil, err
 			}
 		}
 		if family.DivorcedAt != nil && family.DivorcedAt.Date != nil {
 			union.EndDate, err = entity.NewDate(family.DivorcedAt.Date, family.DivorcedAt.DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"family": family}, err, "invalid EndDate")
+				slog.Error("invalid DivorcedAt date", slog.Any("error", err), slog.Any("family", family))
 				return nil, err
 			}
 		}
 		if family.AnnulledAt != nil && family.AnnulledAt.Date != nil {
 			union.EndDate, err = entity.NewDate(family.AnnulledAt.Date, family.AnnulledAt.DateRange)
 			if err != nil {
-				log.Error(ctx, map[string]any{"family": family}, err, "invalid EndDate")
+				slog.Error("invalid AnnulledAt date", slog.Any("error", err), slog.Any("family", family))
 				return nil, err
 			}
 		}
@@ -202,11 +202,11 @@ func convertGedcomFamilies(ctx context.Context, records []*gedcom.FamilyRecord, 
 			union.Person1 = partners[0]
 			union.Person2 = partners[1]
 
-			log.Warn(ctx, map[string]any{
-				"xref":        family.Xref,
-				"i":           i,
-				"partner_ids": family.ParentXrefs[2:],
-			}, "discarding extra partner references in family")
+			slog.Warn("discarding extra partner references in family",
+				slog.String("xref", family.Xref),
+				slog.Int("i", i),
+				slog.Any("partner_ids", family.ParentXrefs[2:]),
+			)
 		}
 
 		children := make([]*entity.Person, len(family.ChildXrefs))

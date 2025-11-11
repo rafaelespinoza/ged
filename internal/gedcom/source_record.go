@@ -3,10 +3,11 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // SourceRecord is a record structure for a source. Its URI g7:record-SOUR.
@@ -28,21 +29,17 @@ func parseSourceRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseSourceRecord"), slog.Int("i", i))
+
 	for j, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseSourceRecord",
-			"i":       i,
-			"j":       j,
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line",
+			slog.Int("j", j),
+			slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text),
+		)
 
 		switch subline.Tag {
 		case "TITL":
@@ -64,7 +61,7 @@ func parseSourceRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 			}
 			out.Notes = append(out.Notes, note)
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", subline.Tag))
 		}
 	}
 

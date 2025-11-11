@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/entity/date"
-	"github.com/rafaelespinoza/ged/internal/log"
 
 	mermaid_go "github.com/dreampuf/mermaid.go"
 )
@@ -248,7 +248,7 @@ func (m *mermaidRenderer) DrawSVG(ctx context.Context, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	log.Debug(ctx, map[string]any{"num_bytes_written": n, "method": "DrawSVG"}, "wrote mermaid data")
+	slog.Debug("wrote mermaid data", slog.Int("num_bytes_written", n), slog.String("method", "DrawSVG"))
 	return nil
 }
 
@@ -261,7 +261,7 @@ func (m *mermaidRenderer) DrawPNG(ctx context.Context, w io.Writer, scale float6
 	if err != nil {
 		return err
 	}
-	log.Debug(ctx, map[string]any{"num_bytes_written": n, "scale": scale, "method": "DrawPNG", "box": box}, "wrote mermaid data")
+	slog.Debug("wrote mermaid data", slog.Int("num_bytes_written", n), slog.Float64("scale", scale), slog.String("method", "DrawPNG"), slog.Any("box", box))
 	return nil
 }
 

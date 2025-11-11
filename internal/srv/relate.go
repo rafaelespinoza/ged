@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
-	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 type Relator interface {
@@ -121,11 +121,11 @@ func (r *relator) relate(ctx context.Context, p1ID, p2ID string) (r1, r2 entity.
 	ancestor, ok := r.peopleByID[ancestorID]
 	if !ok {
 		err = errUnrelated
-		log.Error(ctx, map[string]any{"p1": p1ID, "p2": p2ID}, err, "")
+		slog.Error("", slog.String("p1", p1ID), slog.String("p2", p2ID), slog.Any("error", err))
 		return
 	}
 
-	log.Info(ctx, map[string]any{"id": ancestorID, "name": ancestor.Name.Full()}, "found most recent common ancestor")
+	slog.Debug("found most recent common ancestor", slog.String("id", ancestorID), slog.String("name", ancestor.Name.Full()))
 
 	r1, r2, err = makeRelationships(r, shortestP1Path, shortestP2Path)
 	if err == nil {
@@ -148,7 +148,7 @@ func findCommonAncestorPaths(ctx context.Context, tag string, r *relator, currGe
 	currPath := append(duplicateIDs(prevPath), id)
 
 	if visited.has(id) {
-		log.Debug(ctx, map[string]any{"id": id, "tag": tag}, "apparently already visited person")
+		slog.Debug("apparently already visited person", slog.String("id", id), slog.String("tag", tag))
 		// ancestorID = id
 		allPaths.add(id, currPath)
 		// return
@@ -179,12 +179,12 @@ func getShortestCommonPaths(ctx context.Context, r *relator, p1Paths, p2Paths pa
 	p1Path, p2Path = nil, nil
 	slices.Sort(commonIDs) // ensure deterministic results.
 
-	log.Debug(ctx, map[string]any{"common_ids": commonIDs}, "shortest common path")
+	slog.Debug("shortest common path", slog.Any("common_ids", commonIDs))
 
 	for _, commonID := range commonIDs {
 		lt, rt := p1Paths.shortest(commonID), p2Paths.shortest(commonID)
 
-		log.Debug(ctx, map[string]any{"id": commonID, "p1_path": p1Path, "p2_path": p2Path, "lt": lt, "rt": rt}, "common paths")
+		slog.Debug("common paths", slog.String("common_id", commonID), slog.Any("p1_path", p1Path), slog.Any("p2_path", p2Path), slog.Any("lt", lt), slog.Any("rt", rt))
 		if p1Path == nil {
 			p1Path = lt
 		}
@@ -279,32 +279,32 @@ func (r *relator) affiniate(ctx context.Context, p1ID, p2ID string) (r1, r2 enti
 		err = errUnrelated
 		return
 	}
-	log.Debug(ctx, map[string]any{
-		"p1_id":      p1ID,
-		"p2_id":      p2ID,
-		"m1 == nil?": m1 == nil,
-		"m2 == nil?": m2 == nil,
-	}, "# relator.affiniate: after 2 calls to relateSpouses()")
+	slog.Debug("# relator.affiniate: after 2 calls to relateSpouses()",
+		slog.String("p1_id", p1ID),
+		slog.String("p2_id", p2ID),
+		slog.Bool("m1 == nil?", m1 == nil),
+		slog.Bool("m2 == nil?", m2 == nil),
+	)
 
 	if m1 != nil && m2 == nil {
-		log.Debug(ctx, map[string]any{
-			"p1_id":               p1ID,
-			"p2_id":               p2ID,
-			"m1.R1.Type":          m1.R1.Type.String(),
-			"m1.R2.Type":          m1.R2.Type.String(),
-			"m1.Union.Person1.ID": m1.Union.Person1.ID,
-			"m1.Union.Person2.ID": m1.Union.Person2.ID,
-		}, "# relator.affiniate: before affiniate")
+		slog.Debug("# relator.affiniate: before affiniate",
+			slog.String("p1_id", p1ID),
+			slog.String("p2_id", p2ID),
+			slog.String("m1.R1.Type", m1.R1.Type.String()),
+			slog.String("m1.R2.Type", m1.R2.Type.String()),
+			slog.String("m1.Union.Person1.ID", m1.Union.Person1.ID),
+			slog.String("m1.Union.Person2.ID", m1.Union.Person2.ID),
+		)
 		r2, r1, u = affiniate(ctx, r, p1ID, *m1, p2ID)
 	} else if m1 == nil && m2 != nil {
-		log.Debug(ctx, map[string]any{
-			"p1_id":               p1ID,
-			"p2_id":               p2ID,
-			"m2.R1.Type":          m2.R1.Type.String(),
-			"m2.R2.Type":          m2.R2.Type.String(),
-			"m2.Union.Person1.ID": m2.Union.Person1.ID,
-			"m2.Union.Person2.ID": m2.Union.Person2.ID,
-		}, "# relator.affiniate: before affiniate")
+		slog.Debug("# relator.affiniate: before affiniate",
+			slog.String("p1_id", p1ID),
+			slog.String("p2_id", p2ID),
+			slog.String("m2.R1.Type", m2.R1.Type.String()),
+			slog.String("m2.R2.Type", m2.R2.Type.String()),
+			slog.String("m2.Union.Person1.ID", m2.Union.Person1.ID),
+			slog.String("m2.Union.Person2.ID", m2.Union.Person2.ID),
+		)
 		r1, r2, u = affiniate(ctx, r, p2ID, *m2, p1ID)
 	}
 
@@ -323,14 +323,14 @@ func relateSpouses(ctx context.Context, r *relator, p1ID, p2ID string) (*entity.
 		}
 
 		var out entity.MutualRelationship
-		log.Debug(ctx, map[string]any{
-			"p1_id":            p1ID,
-			"p2_id":            p2ID,
-			"p1_spouse_id":     p1SpouseID,
-			"r1.Type":          r1.Type.String(),
-			"r2.Type":          r2.Type.String(),
-			"common_person_id": p.ID,
-		}, "# relateSpouses: people (p1_spouse_id + p2_id) seem related")
+		slog.Debug("# relateSpouses: people (p1_spouse_id + p2_id) seem related",
+			slog.String("p1_id", p1ID),
+			slog.String("p2_id", p2ID),
+			slog.String("p1_spound_id", p1SpouseID),
+			slog.String("r1.Type", r1.Type.String()),
+			slog.String("r1.Type", r2.Type.String()),
+			slog.String("common_person_id", p.ID),
+		)
 		out.R1, out.R2 = r1, r2
 		out.CommonPerson = p
 
@@ -423,10 +423,7 @@ func invertRelationship(in entity.Relationship) (out entity.Relationship) {
 
 	desc, _, err := describeRelationship(out.Type, out.GenerationsRemoved, generationsSinceCommonAncestor)
 	if err != nil {
-		log.Error(context.TODO(), map[string]any{
-			"in":  in,
-			"out": out,
-		}, err, "srv.invertRelationship: could not compute lineage inversion")
+		slog.Error("srv.invertRelationship: could not compute lineage inversion", slog.Any("error", err), slog.Any("in", in), slog.Any("out", out))
 	}
 	out.Description = desc
 	out.SourceID, out.TargetID = in.TargetID, in.SourceID
@@ -434,9 +431,9 @@ func invertRelationship(in entity.Relationship) (out entity.Relationship) {
 	return
 }
 
-func changeTypeToAffinal(ctx context.Context, r *entity.Relationship) {
+func changeTypeToAffinal(_ context.Context, r *entity.Relationship) {
 	if r.Type >= entity.Spouse {
-		log.Debug(ctx, map[string]any{"type": r.Type.String()}, "# changeTypeToAffinal: Type seems to already be affinal")
+		slog.Debug("# changeTypeToAffinal: Type seems to already be affinal", slog.String("type", r.Type.String()))
 		return
 	}
 

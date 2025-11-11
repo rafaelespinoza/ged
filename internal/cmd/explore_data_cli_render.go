@@ -1,16 +1,15 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/muesli/termenv"
-	"github.com/rafaelespinoza/ged/internal/log"
 )
 
 // Common style definitions. If you're going use a Style modifier method (ie:
@@ -208,7 +207,7 @@ func tableizeGroupSheetPeople(columnNames []string, people ...*groupSheetSimpleP
 			case "death_place":
 				value = p.Death.Place
 			default:
-				log.Warn(context.TODO(), map[string]any{"column_name": column}, "tableizeGroupSheetPeople: unmapped column")
+				slog.Warn("tableizeGroupSheetPeople: unmapped column", slog.String("column_name", column))
 			}
 			values[j] = value
 		}

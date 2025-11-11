@@ -3,6 +3,7 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 	"github.com/rafaelespinoza/ged/internal/gedcom/enumset"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // IndividualRecord is a record structure for an individual person. Its URI is
@@ -40,21 +41,17 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseIndividualRecord"), slog.Int("i", i))
+
 	for j, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseIndividualRecord",
-			"i":       i,
-			"j":       j,
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line",
+			slog.Int("j", j),
+			slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text),
+		)
 
 		switch tag := subline.Tag; tag {
 		case "NAME":
@@ -66,7 +63,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "BIRT":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Birth")
 				out.Birth = append(out.Birth, event)
@@ -74,7 +71,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "BAPM":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Baptism")
 				out.Baptism = append(out.Baptism, event)
@@ -82,7 +79,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "CHR":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Christening")
 				out.Christening = append(out.Christening, event)
@@ -90,7 +87,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "RESI":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Residence")
 				out.Residences = append(out.Residences, event)
@@ -98,7 +95,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "NATU":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Naturalization")
 				out.Naturalizations = append(out.Naturalizations, event)
@@ -106,7 +103,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "EVEN":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Event")
 				out.Events = append(out.Events, event)
@@ -114,7 +111,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "DEAT":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Death")
 				out.Death = append(out.Death, event)
@@ -122,7 +119,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 		case "BURI":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing "+tag+", skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				event.setTypeIfEmpty("Burial")
 				out.Burial = append(out.Burial, event)
@@ -146,7 +143,7 @@ func parseIndividualRecord(ctx context.Context, i int, line *gedcom7.Line, subno
 			}
 			out.Notes = append(out.Notes, note)
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", subline.Tag))
 		}
 	}
 

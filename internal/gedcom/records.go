@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // Records is a collection of top-level record types.
@@ -24,14 +25,11 @@ func ReadRecords(ctx context.Context, r io.Reader) (*Records, error) {
 	doc := gedcom7.NewDocument(bufio.NewScanner(r), gedcom7.WithMaxDeprecatedTags("5.5.1"))
 
 	warnings := doc.GetWarnings()
-	fields := map[string]any{
-		"func":         "ReadRecords",
-		"num_records":  doc.Len(),
-		"num_warnings": len(warnings),
-		"warnings":     warnings,
-	}
 
-	log.Info(ctx, fields, "processed gedcom7 document")
+	logger := logg.New("", slog.String("func", "ReadRecords"))
+	logger.Info("processed gedcom7 document",
+		slog.Int("num_records", doc.Len()), slog.Int("num_warnings", len(warnings)), slog.Any("warnings", warnings),
+	)
 
 	nodes := doc.Records()
 	out := Records{
@@ -65,13 +63,7 @@ func ReadRecords(ctx context.Context, r io.Reader) (*Records, error) {
 			}
 			out.Sources = append(out.Sources, source)
 		default:
-			fields := map[string]any{
-				"func": "ReadRecords",
-				"i":    i,
-				"line": line.Text,
-				"tag":  line.Tag,
-			}
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag", slog.Int("i", i), slog.String("line", line.Text), slog.String("tag", line.Tag))
 		}
 	}
 

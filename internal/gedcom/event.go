@@ -3,12 +3,13 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
 	"github.com/rafaelespinoza/ged/internal/entity/date"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // Event is a general-purpose struct that could be used to record events in an
@@ -34,19 +35,14 @@ func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseEvent"))
+
 	for _, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseEvent",
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line", slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text))
 
 		switch subline.Tag {
 		case "DATE":
@@ -81,7 +77,7 @@ func parseEvent(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node
 		case "TYPE":
 			out.Type = subline.Payload
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag", slog.String("subtag", subline.Tag))
 		}
 	}
 

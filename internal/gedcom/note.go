@@ -3,10 +3,11 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // A Note is a catch-all location for info that doesn't really fit within other
@@ -24,19 +25,14 @@ func parseNote(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node)
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseNote"))
+
 	for _, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseEvent",
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line", slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text))
 
 		switch subline.Tag {
 		case "CONC":
@@ -54,7 +50,7 @@ func parseNote(ctx context.Context, line *gedcom7.Line, subnodes []*gedcom.Node)
 			}
 			out.SourceCitations = append(out.SourceCitations, citation)
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", subline.Tag))
 		}
 	}
 

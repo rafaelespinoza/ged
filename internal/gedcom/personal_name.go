@@ -3,6 +3,7 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
 	"github.com/rafaelespinoza/ged/internal/gedcom/enumset"
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // PersonalName is an individual's name. Its URI is g7:INDI-NAME.
@@ -57,18 +58,14 @@ func parsePersonalName(ctx context.Context, line *gedcom7.Line, subnodes []*gedc
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parsePersonalName"))
+
 	for _, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "newPersonalName",
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
-		log.Debug(ctx, fields, "")
+		logger.Debug("reading line", slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text))
 
 		payload := subline.Payload
 
@@ -100,7 +97,7 @@ func parsePersonalName(ctx context.Context, line *gedcom7.Line, subnodes []*gedc
 		default:
 			// There may be some metadata-related tags such as NAME-TYPE , or
 			// NOTE. For now, not parsing those, but might try to do so later.
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", subline.Tag))
 		}
 	}
 

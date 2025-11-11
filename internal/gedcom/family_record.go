@@ -3,11 +3,12 @@ package gedcom
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/funwithbots/go-gedcom/pkg/gedcom"
 	"github.com/funwithbots/go-gedcom/pkg/gedcom7"
 
-	"github.com/rafaelespinoza/ged/internal/log"
+	"github.com/rafaelespinoza/logg"
 )
 
 // FamilyRecord is a record structure for a family. Its URI g7:record-FAM.
@@ -27,23 +28,19 @@ func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 
 	var subline *gedcom7.Line
 
+	logger := logg.New("", slog.String("func", "parseFamilyRecord"), slog.Int("i", i))
+
 	for j, subnode := range subnodes {
 		if subline, err = parseLine(subnode); err != nil {
 			return
 		}
 
-		fields := map[string]any{
-			"func":    "parseFamilyRecord",
-			"i":       i,
-			"j":       j,
-			"line":    line.Text,
-			"subtag":  subline.Tag,
-			"subline": subline.Text,
-		}
+		logger.Debug("reading line",
+			slog.Int("j", j),
+			slog.String("line", line.Text), slog.String("subtag", subline.Tag), slog.String("subline", subline.Text),
+		)
 
-		log.Debug(ctx, fields, "")
-
-		switch subline.Tag {
+		switch tag := subline.Tag; tag {
 		case "HUSB", "WIFE":
 			out.ParentXrefs = append(out.ParentXrefs, subline.Payload)
 		case "CHIL":
@@ -51,21 +48,21 @@ func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 		case "MARR":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing MARR, skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				out.MarriedAt = event
 			}
 		case "DIV":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing DIV, skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				out.DivorcedAt = event
 			}
 		case "ANUL":
 			event, err := parseEvent(ctx, subline, subnode.GetSubnodes())
 			if err != nil {
-				log.Error(ctx, fields, err, "error parsing ANUL, skipping")
+				logger.Warn("error parsing tag, skipping", slog.String("tag", tag), slog.Any("error", err))
 			} else {
 				out.AnnulledAt = event
 			}
@@ -82,7 +79,7 @@ func parseFamilyRecord(ctx context.Context, i int, line *gedcom7.Line, subnodes 
 			}
 			out.Notes = append(out.Notes, note)
 		default:
-			log.Warn(ctx, fields, "unsupported Tag")
+			logger.Warn("unsupported Tag, skipping", slog.String("tag", tag))
 		}
 	}
 
