@@ -1,3 +1,4 @@
+// Package cmd implements the command line interface.
 package cmd
 
 import (
@@ -26,20 +27,18 @@ var (
 
 const mainName = "ged"
 
-// Root abstracts a top-level command from package main.
-type Root interface {
-	// Run is the entry point. It should be called with os.Args[1:].
-	Run(ctx context.Context, args []string) error
-}
-
-// New constructs a top-level command with subcommands.
-func New() Root {
+// New constructs a top-level command with subcommands. The Run method is the
+// entry point. Call it like this:
+//
+//	err := cmd.New().Run(context.Background(), os.Args[1:])
+func New() *alf.Root {
 	del := &alf.Delegator{
 		Description: "main command for " + mainName,
 		Subs: map[string]alf.Directive{
 			"draw":         makeDraw("draw"),
 			"parse":        makeParse("parse"),
 			"explore-data": makeExploreData("explore-data"),
+			"version":      makeVersion("version"),
 		},
 	}
 

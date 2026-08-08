@@ -7,14 +7,32 @@ MAIN_BIN := "bin/main"
 
 PKG_PATH := "./..."
 
+[private]
+_GO_VERSION := `go version | awk '{ print $3 }'`
+[private]
+PKG_IMPORT_PATH := "github.com/rafaelespinoza/ged"
+[private]
+_LDFLAGS_BASE_PREFIX := "-X " + PKG_IMPORT_PATH + "/internal/cmd"
+[private]
+_LDFLAGS_DELIMITER := "\n\t"
+[private]
+_LDFLAGS := ("-extldflags '-static'" + _LDFLAGS_DELIMITER + _LDFLAGS_BASE_PREFIX + ".versionBranchName=" + `git rev-parse --abbrev-ref HEAD` + _LDFLAGS_DELIMITER + _LDFLAGS_BASE_PREFIX + ".versionBuildTime=" + `date -u +%FT%T%z` + _LDFLAGS_DELIMITER + _LDFLAGS_BASE_PREFIX + ".versionCommitHash=" + `git rev-parse --short=7 HEAD` + _LDFLAGS_DELIMITER + _LDFLAGS_BASE_PREFIX + ".versionGoVersion=" + _GO_VERSION + _LDFLAGS_DELIMITER + _LDFLAGS_BASE_PREFIX + ".versionTag=" + `git describe --tag 2>/dev/null || echo 'dev'`)
+
 # list available recipes
 default:
     @{{ justfile() }} --list --unsorted
 
 # compile a binary for package main
 [group('go')]
+[script('sh')]
 build *args: _bin_dir
-    @{{ GO }} build -o {{ MAIN_BIN }} {{ args }} {{ invocation_directory() }}
+    set -eu
+    bin={{ clean(MAIN_BIN) }}
+    bin_dir={{ parent_directory(MAIN_BIN) }}
+    mkdir -pv "${bin_dir}"
+    ldflags="{{ _LDFLAGS }}"
+    {{ GO }} build -o="${bin}" -v -ldflags="${ldflags}" {{ args }} .
+    "${bin}" version
 
 alias b := build
 
