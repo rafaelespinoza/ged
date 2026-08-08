@@ -29,8 +29,8 @@ The justfile defines the most common operations.
 # list tasks
 $ just
 
-# get, tidy, vendor application dependencies
-$ just mod
+# get, tidy application dependencies
+$ just modtidy
 
 # build, run binary
 $ just build
@@ -46,13 +46,13 @@ Tests
 $ just test
 
 # run tests on a specific package path
-$ just test ./internal/repo/...
+$ just --set PKG_PATH ./internal/gedcom/... test
 
 # run tests with some flags
-$ just ARGS='-v -count=1 -failfast' test
+$ just test -v -count=1 -failfast
 
 # run tests on a specific package path, while also specifying flags
-$ just ARGS='-v -run TestFoo' test ./internal/gedcom/...
+$ just --set PKG_PATH ./internal/gedcom/... test -v -run TestFoo
 ```
 
 Static analysis
