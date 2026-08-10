@@ -225,12 +225,15 @@ func TestReadRecordsFields(t *testing.T) {
 			},
 		}
 		if len(records.Families) != len(expected) {
-			t.Fatalf("got %d record(s) but expected %d", len(records.Families), len(expected))
+			t.Errorf("got %d record(s) but expected %d", len(records.Families), len(expected))
 		}
 
 		for i, got := range records.Families {
 			errMsgPrefix := fmt.Sprintf("item[%d]", i)
-			exp := expected[i]
+			if i >= len(expected) {
+				t.Fatal("too many results")
+			}
+			exp := expected[i] // #nosec G602 -- a length check was performed
 
 			if got.Xref != exp.Xref {
 				t.Fatalf("%swrong Xref; got %q, exp %q", errMsgPrefix+"; ", got.Xref, exp.Xref)

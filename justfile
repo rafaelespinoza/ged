@@ -54,15 +54,32 @@ alias br := buildrun
 modtidy:
     {{ GO }} mod tidy
 
-# examine source code for suspicious constructs
-[group('go')]
-vet *args:
-    {{ GO }} vet {{ args }} {{ PKG_PATH }}
-
-# run tests (override variable value ARGS to use test flags)
+# run tests
 [group('go')]
 test *args:
     {{ GO }} test {{ args }} {{ PKG_PATH }}
+
+# examine source code for suspicious constructs
+[group('go.static')]
+vet *args:
+    {{ GO }} vet {{ args }} {{ PKG_PATH }}
+
+# check for known vulnerabilities
+[group('go.static')]
+govulncheck *args:
+    {{ GO }} run golang.org/x/vuln/cmd/govulncheck@latest {{ args }} {{ PKG_PATH }}
+
+GOSEC := "gosec"
+
+# This Justfile won't install the scanner binary for you, so check out the
+# gosec README for instructions: https://github.com/securego/gosec
+#
+# If necessary, specify the path to the built binary with the GOSEC variable.
+
+# Run a security scanner over the source code
+[group('go.static')]
+gosec *args:
+    {{ GOSEC }} {{ args }} {{ PKG_PATH }}
 
 _bin_dir:
     @mkdir -pv {{ parent_directory(MAIN_BIN) }}

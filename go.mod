@@ -1,6 +1,6 @@
 module github.com/rafaelespinoza/ged
 
-go 1.22
+go 1.25.0
 
 require (
 	github.com/charmbracelet/lipgloss v0.9.1
@@ -28,6 +28,6 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
