@@ -219,7 +219,7 @@ func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, erro
 		maxEdges: 750, // default is 500
 		flowchart: { defaultRenderer: "elk" },
 	});`
-	re, err := mermaid_go.NewRenderEngine(ctx, flowchartStatements)
+	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements})
 	if err != nil {
 		return nil, err
 	}
