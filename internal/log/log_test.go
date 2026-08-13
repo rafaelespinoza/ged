@@ -1,8 +1,12 @@
-package cmd
+package log_test
 
-import "testing"
+import (
+	"testing"
 
-func TestNewLogHandler(t *testing.T) {
+	"github.com/rafaelespinoza/ged/internal/log"
+)
+
+func TestNewHandler(t *testing.T) {
 	tests := []struct {
 		name       string
 		off        bool
@@ -23,7 +27,7 @@ func TestNewLogHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler, err := newLogHandler(nil, test.off, test.level, test.format)
+			handler, err := log.NewHandler(t.Output(), test.off, test.level, test.format)
 
 			if test.expErr && err == nil {
 				t.Fatal("expected an error")

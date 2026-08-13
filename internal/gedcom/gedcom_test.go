@@ -12,7 +12,21 @@ import (
 
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 	"github.com/rafaelespinoza/ged/internal/gedcom"
+	"github.com/rafaelespinoza/ged/internal/testutil"
 )
+
+func TestMain(m *testing.M) {
+	reset, err := testutil.SetDefaultsFromCLI(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(2)
+	}
+
+	defer reset()
+
+	exitCode := m.Run()
+	os.Exit(exitCode)
+}
 
 func TestReadRecordsSanityCheck(t *testing.T) {
 	// check that it can read data and that outputs are non-empty

@@ -57,7 +57,7 @@ modtidy:
 # run tests
 [group('go')]
 test *args:
-    {{ GO }} test {{ args }} {{ PKG_PATH }}
+    {{ GO }} test {{ PKG_PATH }} {{ args }}
 
 # examine source code for suspicious constructs
 [group('go.static')]

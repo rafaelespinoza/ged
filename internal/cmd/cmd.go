@@ -7,12 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/rafaelespinoza/alf"
+	"github.com/rafaelespinoza/ged/internal/log"
 
 	"github.com/rafaelespinoza/logg"
 )
@@ -44,8 +43,8 @@ func New() *alf.Root {
 
 	rootFlags := newFlagSet(mainName)
 	rootFlags.BoolVar(&args.loggingOff, "q", false, "if true, then all logging is effectively off")
-	rootFlags.StringVar(&args.logLevel, "loglevel", validLoggingLevels[len(validLoggingLevels)-1].String(), fmt.Sprintf("minimum severity for which to log events, should be one of %q", validLoggingLevels))
-	rootFlags.StringVar(&args.logFormat, "logformat", validLoggingFormats[len(validLoggingFormats)-1], fmt.Sprintf("output format for logs, should be one of %q", validLoggingFormats))
+	rootFlags.StringVar(&args.logLevel, "loglevel", log.ValidLoggingLevels[len(log.ValidLoggingLevels)-1].String(), fmt.Sprintf("minimum severity for which to log events, should be one of %q", log.ValidLoggingLevels))
+	rootFlags.StringVar(&args.logFormat, "logformat", log.ValidLoggingFormats[len(log.ValidLoggingFormats)-1], fmt.Sprintf("output format for logs, should be one of %q", log.ValidLoggingFormats))
 
 	rootFlags.Usage = func() {
 		fmt.Fprintf(rootFlags.Output(), `%s
@@ -91,7 +90,7 @@ Examples:
 	return &alf.Root{
 		Delegator: del,
 		PrePerform: func(_ context.Context) error {
-			handler, err := newLogHandler(os.Stderr, args.loggingOff, args.logLevel, args.logFormat)
+			handler, err := log.NewHandler(os.Stderr, args.loggingOff, args.logLevel, args.logFormat)
 			if err != nil {
 				return err
 			}
@@ -100,50 +99,6 @@ Examples:
 			return nil
 		},
 	}
-}
-
-var (
-	validLoggingLevels  = []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError}
-	validLoggingFormats = []string{"JSON", "TEXT"}
-)
-
-func newLogHandler(w io.Writer, loggingOff bool, logLevel, logFormat string) (slog.Handler, error) {
-	if loggingOff {
-		return slog.NewTextHandler(io.Discard, nil), nil
-	}
-
-	var lvl slog.Level
-	levels := make([]string, len(validLoggingLevels))
-	for i, validLevel := range validLoggingLevels {
-		levels[i] = validLevel.String()
-	}
-	if ind := slices.Index(levels, strings.ToUpper(strings.TrimSpace(logLevel))); ind >= 0 {
-		lvl = validLoggingLevels[ind]
-	} else {
-		return nil, fmt.Errorf("invalid log level %q; should be one of %q", logLevel, validLoggingLevels)
-	}
-
-	opts := slog.HandlerOptions{
-		Level: lvl,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.TimeKey {
-				return slog.Attr{}
-			}
-			return a
-		},
-	}
-	var handler slog.Handler
-
-	switch strings.ToUpper(strings.TrimSpace(logFormat)) {
-	case "JSON":
-		handler = slog.NewJSONHandler(w, &opts)
-	case "TEXT":
-		handler = slog.NewTextHandler(w, &opts)
-	default:
-		return nil, fmt.Errorf("invalid log format, should be one of %q", validLoggingFormats)
-	}
-
-	return handler, nil
 }
 
 func newFlagSet(name string) (out *flag.FlagSet) {
