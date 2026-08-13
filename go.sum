@@ -32,8 +32,8 @@ github.com/dreampuf/mermaid.go v0.0.39 h1:K7R+FaAOxKd32/yic9SVz0u9bedS5nV/6nUgGn
 github.com/dreampuf/mermaid.go v0.0.39/go.mod h1:xBmQWWnPFQl7HIfEz+KnZ+BpXPJl9qXe9aISIPJGsAM=
 github.com/funwithbots/go-abnf v0.4.1 h1:kJyRtLQ/qhQdX9khagvcURfAeMadf0Rf/8kjkndr+UE=
 github.com/funwithbots/go-abnf v0.4.1/go.mod h1:8RUnQHW3p0b6IzXVlIVmJakN0GrWk8/WOVqtavukU4Q=
-github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 h1:iizUGZ9pEquQS5jTGkh4AqeeHCMbfbjeb0zMt0aEFzs=
-github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2/go.mod h1:TiCD2a1pcmjd7YnhGH0f/zKNcCD06B029pHhzV23c2M=
+github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 h1:KZaTBSyshWX3MP5jukJcNSuXDQTO+rNpt0J564dX/eg=
+github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68/go.mod h1:tphK2c80bpPhMOI4v6bIc2xWywPfbqi1Z06+RcrMkDg=
 github.com/gobwas/httphead v0.1.0 h1:exrUm0f4YX0L7EBwZHuCF4GDp8aJfVeBrlLQrs6NqWU=
 github.com/gobwas/httphead v0.1.0/go.mod h1:O/RXo79gxV8G+RqlR/otEwx4Q36zl9rqC5u12GKvMCM=
 github.com/gobwas/pool v0.2.1 h1:xfeeEhW7pwmX8nuLVlqbzVc7udMDrwetjEv+TZIz1og=
