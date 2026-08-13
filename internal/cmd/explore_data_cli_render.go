@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
-	"github.com/muesli/termenv"
+	lipgloss "charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/table"
+	"github.com/charmbracelet/colorprofile"
 )
 
 // Common style definitions. If you're going use a Style modifier method (ie:
@@ -27,17 +27,17 @@ var (
 func init() {
 	// Ensure retention of basic styling; even when the output isn't directly
 	// connected to a terminal.
-	lipgloss.SetColorProfile(termenv.ANSI)
+	lipgloss.Writer.Profile = colorprofile.ANSI
 }
 
 func renderGroupSheetView(w io.Writer, in *groupSheetView) error {
-	headerStyles := styleBoldUnderline.Copy().MarginBottom(1)
+	headerStyles := styleBoldUnderline.MarginBottom(1)
 	var personView, familiesAsChild, familiesAsPartner, events strings.Builder
 	{
 		personView.WriteString(headerStyles.Render("person") + "\n")
 		personView.WriteString(tableizeGroupSheetPeople([]string{"id", "name", "birth_date", "birth_place", "death_date", "death_place"}, in.Person) + "\n")
 		for _, note := range in.Notes {
-			personView.WriteString(styleFaint.Copy().Width(80).Render(note) + "\n")
+			personView.WriteString(styleFaint.Width(80).Render(note) + "\n")
 		}
 	}
 
@@ -144,7 +144,7 @@ If related by law, through which union?`) + "\n",
 // buildPersonVertically formats the person fields in a vertical orientation. It
 // ensures that the field names and values are aligned in a tabular fashion.
 func buildPersonVertically(in *groupSheetSimplePerson) string {
-	headerStyles := styleBoldUnderline.Copy().MarginRight(2)
+	headerStyles := styleBoldUnderline.MarginRight(2)
 	var columnNames, columnValues strings.Builder
 	columns := []struct{ Key, Val string }{
 		{"name", in.Name},
@@ -168,7 +168,7 @@ func buildPersonVertically(in *groupSheetSimplePerson) string {
 		lipgloss.JoinVertical(lipgloss.Left, columnNames.String()),
 		lipgloss.JoinVertical(lipgloss.Left, columnValues.String()),
 	)
-	return styleBox.Copy().BorderForeground(lipgloss.ANSIColor(termenv.ANSIBrightBlack)).Render(out)
+	return styleBox.BorderForeground(lipgloss.ANSIColor(lipgloss.BrightBlack)).Render(out)
 }
 
 func buildRelationshipComponent(desc, p1, p2 string, rel *relationship) string {
@@ -224,7 +224,7 @@ func listEvents(in []*groupSheetEvent) string {
 		BorderRow(true).
 		BorderStyle(styleFaint)
 
-	wrappingStyle := styleTableRow.Copy().Width(40)
+	wrappingStyle := styleTableRow.Width(40)
 
 	for _, ev := range in {
 		out = out.Row(
@@ -238,7 +238,7 @@ func listEvents(in []*groupSheetEvent) string {
 }
 
 func getTableRowStyle(row, col int) lipgloss.Style {
-	if row == 0 {
+	if row == table.HeaderRow {
 		return styleTableHeader
 	}
 
