@@ -1,6 +1,6 @@
 module github.com/rafaelespinoza/ged
 
-go 1.25.0
+go 1.26
 
 require (
 	charm.land/lipgloss/v2 v2.0.6
@@ -23,7 +23,7 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/funwithbots/go-abnf v0.4.1 // indirect
-	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 // indirect
+	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
