@@ -216,6 +216,7 @@ type MermaidRenderer interface {
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
 	const flowchartStatements = `mermaid.initialize({
 		maxTextSize: 200000,	// default is 50000
+		maxEdges: 750, // default is 500
 		flowchart: { defaultRenderer: "elk" },
 	});`
 	re, err := mermaid_go.NewRenderEngine(ctx, flowchartStatements)
