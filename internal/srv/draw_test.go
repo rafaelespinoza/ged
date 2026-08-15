@@ -281,20 +281,20 @@ func testPNG(t *testing.T, ctx context.Context, r io.Reader, scale float64) {
 
 	m, err := NewMermaidRenderer(ctx, r)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("making new mermaid renderer: %v", err)
 	}
 	defer func() {
 		if cerr := m.Close(); cerr != nil {
-			t.Log(cerr)
+			t.Logf("closing mermaid renderer: %v", cerr)
 		}
 	}()
 
 	buf := new(bytes.Buffer)
 	if err = m.DrawPNG(ctx, buf, scale); err != nil {
-		t.Fatal(err)
+		t.Fatalf("drawing png: %v", err)
 	}
 
 	if _, err = png.Decode(buf); err != nil {
-		t.Fatal(err)
+		t.Fatalf("decoding png: %v", err)
 	}
 }
