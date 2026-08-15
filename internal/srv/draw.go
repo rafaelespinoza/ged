@@ -9,10 +9,12 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 
+	"github.com/chromedp/chromedp"
 	mermaid_go "github.com/dreampuf/mermaid.go"
 )
 
@@ -219,7 +221,7 @@ func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, erro
 		maxEdges: 750, // default is 500
 		flowchart: { defaultRenderer: "elk" },
 	});`
-	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements})
+	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, chromedp.WSURLReadTimeout(30*time.Second))
 	if err != nil {
 		return nil, err
 	}
