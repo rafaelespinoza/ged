@@ -183,23 +183,23 @@ M. Simpson
 	F0000 =====> LISA_SIMPSON`
 
 	t.Run("SVG", func(t *testing.T) {
-		testSVG(t, context.Background(), strings.NewReader(input))
+		testSVG(t, strings.NewReader(input))
 	})
 
 	t.Run("PNG", func(t *testing.T) {
-		testPNG(t, context.Background(), strings.NewReader(input), 5.0)
+		testPNG(t, strings.NewReader(input), 5.0)
 	})
 }
 
 func TestDraw(t *testing.T) {
-	gedcomToMermaid := func(t *testing.T, ctx context.Context, pathToFile string) io.Reader {
+	gedcomToMermaid := func(t *testing.T, pathToFile string) io.Reader {
 		file, err := os.Open(filepath.Clean(pathToFile))
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer func() { _ = file.Close() }()
 
-		people, unions, err := ParseGedcom(ctx, file)
+		people, unions, err := ParseGedcom(t.Context(), file)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -212,7 +212,7 @@ func TestDraw(t *testing.T) {
 			People:    people,
 			Unions:    unions,
 		}
-		if err = MakeMermaidFlowchart(ctx, params); err != nil {
+		if err = MakeMermaidFlowchart(t.Context(), params); err != nil {
 			t.Fatal(err)
 		}
 
@@ -221,26 +221,24 @@ func TestDraw(t *testing.T) {
 
 	t.Run("SVG", func(t *testing.T) {
 		for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged", "simpsons.ged"} {
-			ctx := context.Background()
 			pathToFile := filepath.Join("..", "..", "testdata", testFilename)
-			buf := gedcomToMermaid(t, ctx, pathToFile)
+			buf := gedcomToMermaid(t, pathToFile)
 
-			t.Run(testFilename, func(t *testing.T) { testSVG(t, ctx, buf) })
+			t.Run(testFilename, func(t *testing.T) { testSVG(t, buf) })
 		}
 	})
 
 	t.Run("PNG", func(t *testing.T) {
 		for _, testFilename := range []string{"kennedy.ged", "game_of_thrones.ged", "simpsons.ged"} {
-			ctx := context.Background()
-			pathToFile := filepath.Join("..", "..", "testdata", testFilename)
-			buf := gedcomToMermaid(t, ctx, pathToFile)
 
 			t.Run(testFilename, func(t *testing.T) {
 				for _, scale := range []float64{1, 5, 10} {
+					pathToFile := filepath.Join("..", "..", "testdata", testFilename)
+					buf := gedcomToMermaid(t, pathToFile)
 					name := strconv.FormatFloat(scale, 'f', 1, 64)
 
 					t.Run(name, func(t *testing.T) {
-						testPNG(t, ctx, buf, scale)
+						testPNG(t, buf, scale)
 					})
 				}
 			})
@@ -248,10 +246,10 @@ func TestDraw(t *testing.T) {
 	})
 }
 
-func testSVG(t *testing.T, ctx context.Context, r io.Reader) {
+func testSVG(t *testing.T, r io.Reader) {
 	t.Helper()
 
-	m, err := NewMermaidRenderer(ctx, r)
+	m, err := NewMermaidRenderer(t.Context(), r)
 	if err != nil {
 		t.Fatalf("making new mermaid renderer: %v", err)
 	}
@@ -262,7 +260,7 @@ func testSVG(t *testing.T, ctx context.Context, r io.Reader) {
 	}()
 
 	buf := new(bytes.Buffer)
-	if err = m.DrawSVG(ctx, buf); err != nil {
+	if err = m.DrawSVG(t.Context(), buf); err != nil {
 		t.Fatalf("drawing svg: %v", err)
 	}
 	got := buf.String()
@@ -276,10 +274,10 @@ func testSVG(t *testing.T, ctx context.Context, r io.Reader) {
 	}
 }
 
-func testPNG(t *testing.T, ctx context.Context, r io.Reader, scale float64) {
+func testPNG(t *testing.T, r io.Reader, scale float64) {
 	t.Helper()
 
-	m, err := NewMermaidRenderer(ctx, r)
+	m, err := NewMermaidRenderer(t.Context(), r)
 	if err != nil {
 		t.Fatalf("making new mermaid renderer: %v", err)
 	}
@@ -290,7 +288,7 @@ func testPNG(t *testing.T, ctx context.Context, r io.Reader, scale float64) {
 	}()
 
 	buf := new(bytes.Buffer)
-	if err = m.DrawPNG(ctx, buf, scale); err != nil {
+	if err = m.DrawPNG(t.Context(), buf, scale); err != nil {
 		t.Fatalf("drawing png: %v", err)
 	}
 
