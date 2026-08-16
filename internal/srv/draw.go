@@ -258,11 +258,11 @@ func (m *mermaidRenderer) DrawSVG(ctx context.Context, w io.Writer) error {
 func (m *mermaidRenderer) DrawPNG(ctx context.Context, w io.Writer, scale float64) error {
 	out, box, err := m.re.RenderAsScaledPng(m.contents, scale)
 	if err != nil {
-		return err
+		return fmt.Errorf("rendering scaled png: %w", err)
 	}
 	n, err := w.Write(out)
 	if err != nil {
-		return err
+		return fmt.Errorf("writing png output: %w", err)
 	}
 	slog.Debug("wrote mermaid data", slog.Int("num_bytes_written", n), slog.Float64("scale", scale), slog.String("method", "DrawPNG"), slog.Any("box", box))
 	return nil
