@@ -29,7 +29,10 @@ function _run_fzf() {
 	# a match.
 	local -r tiebreak=begin
 
-	fzf -d "${delimiter}" \
+	# Use `exec` here to replace script process with fzf (PID 1 in container) to
+	# ensure direct signal handling (STOPSIGNAL SIGINT) and clean terminal cleanup
+	# on exit.
+	exec fzf -d "${delimiter}" \
 		--with-nth="${with_nth}" \
 		--info=inline \
 		--border=bold --margin=2 --padding=2 \
@@ -92,7 +95,10 @@ $ bin/main explore-data relate -p1 @I0@ -p2 @I10@ < testdata/kennedy.ged" | fold
 	p2=$(echo {+1} | awk "{ print \$2 }")
 	${GED_BIN:?missing GED_BIN} -q explore-data relate -p1 "${p1}" -p2 "${p2}" <"${INFILE:?missing INFILE}"'
 
-	_run_ged parse to-lines < "${infile}" | _run_fzf \
+	# Use process substitution instead of a pipeline (|) so `_run_fzf` runs in the
+	# main shell context rather than a subshell. This allows 'exec fzf' to take
+	# over PID 1.
+	_run_fzf < <(_run_ged parse to-lines < "${infile}") \
 		--header='Pick 2 people to compare. Press TAB to select/unselect. Press Enter when ready.' \
 		--multi=2 \
 		--preview="${fzf_preview}" \
@@ -129,7 +135,10 @@ $ bin/main explore-data show --target-id @I10@ < testdata/kennedy.ged" | fold -s
 		echo >&2 "${no_bkt_msg}"
 	fi
 
-	_run_ged parse to-lines < "${infile}" | _run_fzf \
+	# Use process substitution instead of a pipeline (|) so `_run_fzf` runs in the
+	# main shell context rather than a subshell. This allows 'exec fzf' to take
+	# over PID 1.
+	_run_fzf < <(_run_ged parse to-lines < "${infile}") \
 		--header="Type in name of person to view" \
 		--preview="${fzf_preview}" \
 		--bind="enter:become(${fzf_preview})"

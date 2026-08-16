@@ -38,3 +38,5 @@ require (
 	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/funwithbots/go-gedcom v0.1.2 => github.com/rafaelespinoza/go-gedcom v0.0.0-20260813021950-6c3bae9286ea

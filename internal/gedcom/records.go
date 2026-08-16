@@ -24,7 +24,7 @@ type Records struct {
 func ReadRecords(ctx context.Context, r io.Reader) (*Records, error) {
 	doc := gedcom7.NewDocument(bufio.NewScanner(r), gedcom7.WithMaxDeprecatedTags("5.5.1"))
 
-	warnings := doc.GetWarnings()
+	warnings := doc.Warnings()
 
 	logger := logg.New("", slog.String("func", "ReadRecords"))
 	logger.Info("processed gedcom7 document",

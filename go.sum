@@ -32,8 +32,6 @@ github.com/dreampuf/mermaid.go v0.0.13 h1:28bkq8UfK6/D2VyFTI2D65tNnuEFeQTeM9So8g
 github.com/dreampuf/mermaid.go v0.0.13/go.mod h1:2nEdyoCR3UJ0q7bYjo8+PbNJDVKXBG+w+vvjQQj6sS0=
 github.com/funwithbots/go-abnf v0.4.1 h1:kJyRtLQ/qhQdX9khagvcURfAeMadf0Rf/8kjkndr+UE=
 github.com/funwithbots/go-abnf v0.4.1/go.mod h1:8RUnQHW3p0b6IzXVlIVmJakN0GrWk8/WOVqtavukU4Q=
-github.com/funwithbots/go-gedcom v0.1.2 h1:QN5Q1rvpxCTs53ylQzfKJH19Eo40PFXuULGb1/gSt5E=
-github.com/funwithbots/go-gedcom v0.1.2/go.mod h1:M0bb3wy4y5ViqozD136OM06d3bOVPS8p/XHdN62zIeo=
 github.com/gobwas/httphead v0.1.0 h1:exrUm0f4YX0L7EBwZHuCF4GDp8aJfVeBrlLQrs6NqWU=
 github.com/gobwas/httphead v0.1.0/go.mod h1:O/RXo79gxV8G+RqlR/otEwx4Q36zl9rqC5u12GKvMCM=
 github.com/gobwas/pool v0.2.1 h1:xfeeEhW7pwmX8nuLVlqbzVc7udMDrwetjEv+TZIz1og=
@@ -57,6 +55,8 @@ github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhA
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
 github.com/rafaelespinoza/alf v0.2.0 h1:Ec6XO3omGpneic0GHZB4vBsT/RopzUoca2Vi/Dn+4ZA=
 github.com/rafaelespinoza/alf v0.2.0/go.mod h1:e+DkMzlAa4KONZ2CPAxL7jnh67++BDXl9kEdMOef5rM=
+github.com/rafaelespinoza/go-gedcom v0.0.0-20260813021950-6c3bae9286ea h1:r2kOrpdX9JJOa1Fx2d9xhMedZWxGFJelIZtiUQLxWTE=
+github.com/rafaelespinoza/go-gedcom v0.0.0-20260813021950-6c3bae9286ea/go.mod h1:tYluKWYtWWnWiMF1vb2qlz/VXLKd397Oh/2zfZkKTnE=
 github.com/rafaelespinoza/logg v0.1.1 h1:rVF9Z3mcadixzRG53gXtJAj/+wmwgNZwW/7dBYec6ag=
 github.com/rafaelespinoza/logg v0.1.1/go.mod h1:a+Er8d9LXAlPieg2lWMU2zDaOUG1RutHMknpTytL6MI=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
