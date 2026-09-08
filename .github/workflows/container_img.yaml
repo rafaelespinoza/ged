@@ -44,6 +44,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: true # logout at the end of the job
 
+      - name: Set up Docker to build multi platform images
+        uses: docker/setup-docker-action@77e84dbf09b47d1e29270283c22f16145aa85ca1 # v5.4.0
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       # Builds the container image.
       # Only pushes the built image to the registry when it's a tag that starts with v.
       # In other words, publish the image when there's some kind of versioned tag.
