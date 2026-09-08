@@ -6,7 +6,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/chromedp/chromedp v0.16.0
-	github.com/dreampuf/mermaid.go v0.2.3
+	github.com/dreampuf/mermaid.go v0.4.0
 	github.com/funwithbots/go-gedcom v0.1.2
 	github.com/rafaelespinoza/alf v0.2.0
 	github.com/rafaelespinoza/logg v0.1.1
