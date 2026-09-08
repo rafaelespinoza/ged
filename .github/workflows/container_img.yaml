@@ -44,9 +44,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: true # logout at the end of the job
 
-      - name: QEMU
+      # The runner env will be amd64. Need to do this so we can produce images for arm64.
+      - name: Prep build env to emulate arm64 using QEMU
         uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
 
+      # Use the modern build kit here, with QEMU's arm64 toolset.
       - name: Set up Docker to build multi platform images
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
