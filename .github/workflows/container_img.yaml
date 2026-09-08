@@ -44,6 +44,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: true # logout at the end of the job
 
+      - name: QEMU
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+
       - name: Set up Docker to build multi platform images
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
