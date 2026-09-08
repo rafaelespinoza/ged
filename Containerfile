@@ -5,6 +5,7 @@ FROM alpine:3.24.1 AS builder_aux
 
 LABEL com.rafaelespinoza.ged.stage_type='builder'
 
+# TODO: get fzf v0.74.3
 WORKDIR /src/fzf
 RUN apk add --no-cache bash git && \
   git clone --depth 1 --branch v0.74.2 https://github.com/junegunn/fzf.git . && \
@@ -21,6 +22,12 @@ RUN wget https://github.com/dimo414/bkt/releases/download/0.8.2/bkt.v0.8.2.x86_6
   chmod -c 755 ./bkt && \
   mv -v ./bkt /outbin/bkt && \
   /outbin/bkt --version
+
+# TODO: get merman-cli from github releases once they release v0.8.0.
+# This tool is a headless mermaid diagram maker.
+# That version is expected to have a binary for aarch64.
+# https://github.com/Latias94/merman/
+# This also requires an update of github.com/dreampuf/mermaid.go to v0.4.0.
 
 #
 # Builder stage for main app binaries
