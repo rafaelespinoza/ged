@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - ci-update_img_build # TODO: rm this after testing out things.
     tags:
       - 'v*'
   pull_request:
