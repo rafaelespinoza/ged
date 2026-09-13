@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -141,7 +142,15 @@ type drawUnionOutput struct {
 	ChildIDs  []string
 }
 
-const mermaidFlowchartFamilyTree = `flowchart {{$.FlowChartDirection}}
+const mermaidFlowchartFamilyTree = `---
+config:
+  logLevel: debug
+  layout: elk
+  maxTextSize: 200000
+  maxEdges: 750
+---
+
+flowchart {{$.FlowChartDirection}}
 
 classDef unionNode height:5rem,width:10rem,display:inline-block;
 
@@ -216,12 +225,25 @@ type MermaidRenderer interface {
 }
 
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
-	const flowchartStatements = `mermaid.initialize({
-		maxTextSize: 200000,	// default is 50000
-		maxEdges: 750, // default is 500
-		layout: "elk",
-	});`
-	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, chromedp.WSURLReadTimeout(30*time.Second))
+	def := slog.Default()
+	defer func() { slog.SetDefault(def) }()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})))
+
+	// const flowchartStatements = `mermaid.initialize({
+	// 	maxTextSize: 200000,	// default is 50000
+	// 	maxEdges: 750, // default is 500
+	// 	layout: 'elk',
+	// 	config: { layout: 'wtf' },
+	// });`
+	const initStatements = `mermaid.mermaidAPI.setConfig({
+  	   logLevel: 'bad',
+       layout: "also bad",
+       maxTextSize: 200000,
+       maxEdges: 1
+   });`
+	re, err := mermaid_go.NewRenderEngine(ctx, nil, chromedp.WSURLReadTimeout(30*time.Second))
 	if err != nil {
 		return nil, err
 	}
