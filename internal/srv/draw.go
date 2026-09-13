@@ -219,7 +219,7 @@ func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, erro
 	const flowchartStatements = `mermaid.initialize({
 		maxTextSize: 200000,	// default is 50000
 		maxEdges: 750, // default is 500
-		flowchart: { defaultRenderer: "elk" },
+		layout: "elk",
 	});`
 	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, chromedp.WSURLReadTimeout(30*time.Second))
 	if err != nil {
