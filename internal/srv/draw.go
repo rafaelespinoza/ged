@@ -224,7 +224,7 @@ type MermaidRenderer interface {
 }
 
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
-	re, err := mermaid_go.NewRenderEngine(ctx, nil, chromedp.WSURLReadTimeout(30*time.Second))
+	re, err := mermaid_go.NewRenderEngine(ctx, nil, chromedp.WSURLReadTimeout(30*time.Second)) // TODO: see if you still need the websocket timeout
 	if err != nil {
 		return nil, err
 	}
