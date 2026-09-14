@@ -9,12 +9,10 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 
-	"github.com/chromedp/chromedp"
 	mermaid_go "github.com/dreampuf/mermaid.go"
 )
 
@@ -224,7 +222,7 @@ type MermaidRenderer interface {
 }
 
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
-	re, err := mermaid_go.NewRenderEngine(ctx, nil, chromedp.WSURLReadTimeout(30*time.Second)) // TODO: see if you still need the websocket timeout
+	re, err := mermaid_go.NewRenderEngine(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
