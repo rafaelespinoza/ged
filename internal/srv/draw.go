@@ -139,15 +139,7 @@ type drawUnionOutput struct {
 	ChildIDs  []string
 }
 
-const mermaidFlowchartFamilyTree = `---
-config:
-  logLevel: debug
-  layout: elk
-  maxTextSize: 200000
-  maxEdges: 750
----
-
-flowchart {{$.FlowChartDirection}}
+const mermaidFlowchartFamilyTree = `flowchart {{$.FlowChartDirection}}
 
 classDef unionNode height:5rem,width:10rem,display:inline-block;
 
@@ -222,7 +214,16 @@ type MermaidRenderer interface {
 }
 
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
-	re, err := mermaid_go.NewRenderEngine(ctx, nil)
+	const flowchartStatements = `mermaid.initialize({
+		startOnLoad: false,
+		maxEdges: 750,
+		maxTextSize: 200000, // default is 50000
+		// NOTE: the elk layout would require Mermaid v12. Though it's available in
+		// mermaid v11, it is a separate component, which is not not supported in
+		// the mermaid.go library as of v0.4.0.
+		layout: 'elk',
+	});`
+	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements})
 	if err != nil {
 		return nil, err
 	}

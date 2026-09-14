@@ -11,8 +11,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/chromedp/cdproto/runtime"
-	"github.com/chromedp/chromedp"
 	"github.com/rafaelespinoza/alf"
 	"github.com/rafaelespinoza/ged/internal/srv"
 )
@@ -146,25 +144,6 @@ func makeMermaidFlowchart(ctx context.Context, r io.Reader, w io.Writer, flowcha
 }
 
 func renderMermaidFlowchart(ctx context.Context, r io.Reader, w io.Writer, renderFormat string, pngScale float64) (err error) {
-	ctx, cancel := chromedp.NewContext(
-		ctx,
-		chromedp.WithLogf(slog.Info),
-	)
-	defer cancel()
-	chromedp.ListenTarget(ctx, func(ev any) {
-		switch e := ev.(type) {
-		case *runtime.EventConsoleAPICalled:
-			for _, arg := range e.Args {
-				slog.Info("[Browser Console]", slog.Any("type", e.Type), slog.Any("value", arg.Value))
-			}
-		case *runtime.EventExceptionThrown:
-			// fmt.Printf("[Browser Exception] %s\n", e.ExceptionDetails.Text)
-			slog.Error("[Browser Exception]", slog.String("text", e.ExceptionDetails.Text))
-		default:
-			slog.Info("got something else", slog.String("type", fmt.Sprintf("%T", e)), slog.Any("e", e))
-		}
-	})
-
 	m, err := srv.NewMermaidRenderer(ctx, r)
 	if err != nil {
 		return
