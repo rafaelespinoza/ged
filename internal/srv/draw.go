@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
+	"github.com/chromedp/chromedp"
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 
@@ -223,7 +225,10 @@ func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, erro
 		// the mermaid.go library as of v0.4.0.
 		layout: 'elk',
 	});`
-	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements})
+	// Extend the default timeout for reading from a websocket to help CI pass
+	// more frequently. As of chromedp@v0.16.0, the timeout is 20s.
+	websocketTimeout := chromedp.WSURLReadTimeout(30 * time.Second)
+	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, websocketTimeout)
 	if err != nil {
 		return nil, err
 	}
