@@ -226,7 +226,7 @@ func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, erro
 		layout: 'elk',
 	});`
 	// Extend the default timeout for reading from a websocket to help CI pass
-	// more frequently. As of chromedp@v0.16.0, the timeout is 20s.
+	// more frequently. As of chromedp@v0.16.0, the default timeout is 20s.
 	websocketTimeout := chromedp.WSURLReadTimeout(30 * time.Second)
 	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, websocketTimeout)
 	if err != nil {
