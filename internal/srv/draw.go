@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
+	"github.com/chromedp/chromedp"
 	"github.com/rafaelespinoza/ged/internal/entity"
 	"github.com/rafaelespinoza/ged/internal/entity/date"
 
@@ -215,10 +217,18 @@ type MermaidRenderer interface {
 
 func NewMermaidRenderer(ctx context.Context, r io.Reader) (MermaidRenderer, error) {
 	const flowchartStatements = `mermaid.initialize({
-		maxTextSize: 200000,	// default is 50000
-		flowchart: { defaultRenderer: "elk" },
+		startOnLoad: false,
+		maxEdges: 750,
+		maxTextSize: 200000, // default is 50000
+		// NOTE: the elk layout would require Mermaid v12. Though it's available in
+		// mermaid v11, it is a separate component, which is not not supported in
+		// the mermaid.go library as of v0.4.0.
+		layout: 'elk',
 	});`
-	re, err := mermaid_go.NewRenderEngine(ctx, flowchartStatements)
+	// Extend the default timeout for reading from a websocket to help CI pass
+	// more frequently. As of chromedp@v0.16.0, the default timeout is 20s.
+	websocketTimeout := chromedp.WSURLReadTimeout(30 * time.Second)
+	re, err := mermaid_go.NewRenderEngine(ctx, []string{flowchartStatements}, websocketTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +245,7 @@ type mermaidRenderer struct {
 }
 
 func (m *mermaidRenderer) DrawSVG(ctx context.Context, w io.Writer) error {
-	out, err := m.re.Render(m.contents)
+	out, err := m.re.RenderContext(ctx, m.contents)
 	if err != nil {
 		return err
 	}
@@ -253,13 +263,13 @@ func (m *mermaidRenderer) DrawSVG(ctx context.Context, w io.Writer) error {
 }
 
 func (m *mermaidRenderer) DrawPNG(ctx context.Context, w io.Writer, scale float64) error {
-	out, box, err := m.re.RenderAsScaledPng(m.contents, scale)
+	out, box, err := m.re.RenderAsScaledPngContext(ctx, m.contents, scale)
 	if err != nil {
-		return err
+		return fmt.Errorf("rendering scaled png: %w", err)
 	}
 	n, err := w.Write(out)
 	if err != nil {
-		return err
+		return fmt.Errorf("writing png output: %w", err)
 	}
 	slog.Debug("wrote mermaid data", slog.Int("num_bytes_written", n), slog.Float64("scale", scale), slog.String("method", "DrawPNG"), slog.Any("box", box))
 	return nil
